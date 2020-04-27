@@ -3,6 +3,7 @@
 #   python server.py --help
 import argparse
 import importlib
+import os
 import socketserver
 from http import server
 
@@ -84,9 +85,18 @@ def get_url(host, port, base_path=None):
 def get_handler(signature):
     *path, func = signature.split('.')
     name = '.'.join(path)
-    module = importlib.import_module(name)
-    handler = getattr(module, func)
-    return handler
+    if not name:
+        raise SystemExit(f"Bad handler signature '{signature}'")
+    try:
+        pypath = os.path.join(os.path.curdir, f'{name}.py')
+        spec = importlib.util.spec_from_file_location(name, pypath)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return getattr(module, func)
+    except FileNotFoundError:
+        raise SystemExit(f"Unable to import module '{name}'")
+    except AttributeError:
+        raise SystemExit(f"Handler '{func}' missing on module '{name}'")
 
 
 def run():
@@ -95,7 +105,7 @@ def run():
     server_address = (opts.host, opts.port)
     LambdaRequestHandler.handler = get_handler(opts.HANDLER)
     with socketserver.TCPServer(server_address, LambdaRequestHandler) as httpd:
-        print(f'Starting server at {url}')
+        print(f'Starting LambdaRequestHandler at {url}')
         httpd.serve_forever()
 
 
