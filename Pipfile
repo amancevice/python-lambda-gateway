@@ -5,8 +5,11 @@ verify_ssl = true
 
 [dev-packages]
 flake8 = "*"
+ipdb = "*"
+ipython = "*"
 pytest = "*"
 pytest-cov = "*"
 twine = "*"
 
 [packages]
+lambda-gateway = {editable = true,path = "."}

@@ -106,7 +106,12 @@ def run():
     LambdaRequestHandler.handler = get_handler(opts.HANDLER)
     with socketserver.TCPServer(server_address, LambdaRequestHandler) as httpd:
         print(f'Starting LambdaRequestHandler at {url}')
-        httpd.serve_forever()
+        try:
+            httpd.serve_forever()
+        except KeyboardInterrupt:
+            print('\nStopping LambdaRequestHandler')
+        finally:
+            httpd.shutdown()
 
 
 if __name__ == '__main__':
