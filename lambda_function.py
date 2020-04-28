@@ -1,14 +1,14 @@
 """
 Example Lambda handler function.
 """
+import json
 
 
-def handler(event, context=None):
-    """ Handle Lambda event. """
+def lambda_handler(event, context):
     return {
         'headers': {
             'Content-Type': 'application/json',
         },
         'statusCode': 200,
-        'body': '{"text": "Hello from Lambda Gateway!"}'
+        'body': json.dumps({'text': 'Hello from Lambda Gateway!'})
     }
