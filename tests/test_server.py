@@ -1,3 +1,6 @@
+import http
+from unittest import mock
+
 import pytest
 
 from lambda_gateway import server
@@ -38,3 +41,33 @@ def test_get_handler_no_file():
 def test_get_handler_no_handler():
     with pytest.raises(SystemExit):
         server.get_handler('lambda_function.not_a_function')
+
+
+@mock.patch('http.server.ThreadingHTTPServer')
+def test_run(mock_httpd):
+    mock_httpd.socket.getsockname.return_value = ['host', 8000]
+    server.run(mock_httpd)
+    mock_httpd.serve_forever.assert_called_once_with()
+
+
+@mock.patch('http.server.ThreadingHTTPServer')
+def test_run_int(mock_httpd):
+    mock_httpd.socket.getsockname.return_value = ['host', 8000]
+    mock_httpd.serve_forever.side_effect = KeyboardInterrupt
+    server.run(mock_httpd)
+    mock_httpd.serve_forever.assert_called_once_with()
+    mock_httpd.shutdown.assert_called_once_with()
+
+
+@mock.patch('http.server.ThreadingHTTPServer.__enter__')
+@mock.patch('lambda_gateway.server.run')
+@mock.patch('lambda_gateway.server.setup')
+def test_main(mock_setup, mock_run, mock_httpd):
+    mock_httpd.return_value = '<httpd>'
+    mock_setup.return_value = (
+        http.server.ThreadingHTTPServer,
+        ('localhost', 8000),
+        server.LambdaRequestHandler,
+    )
+    server.main()
+    mock_run.assert_called_once_with('<httpd>')
