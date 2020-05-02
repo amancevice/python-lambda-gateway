@@ -15,7 +15,7 @@ After installing, navigate to the directory where your Lambda function is define
 
 ```bash
 lambda-gateway [-p PORT] [-t TIMEOUT] lambda_function.lambda_handler
-# => Starting LambdaRequestHandler at http://localhost:8000/
+# => Serving HTTP on :: port 8000 (http://[::]:8000/) ...
 ```
 
 ## Installation
