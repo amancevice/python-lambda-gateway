@@ -168,27 +168,41 @@ def get_handler(signature):
         raise SystemExit(f"Handler '{func}' missing on module '{name}'")
 
 
-def run():
-    """ Run Lambda Gateway server. """
+def setup():
+    """ Setup server. """
     opts = get_opts()
     address_family, addr = server._get_best_family(opts.bind, opts.port)
     LambdaRequestHandler.set_handler(opts.HANDLER)
     LambdaRequestHandler.set_timeout(opts.timeout)
     server.ThreadingHTTPServer.address_family = address_family
-    with server.ThreadingHTTPServer(addr, LambdaRequestHandler) as httpd:
-        host, port = httpd.socket.getsockname()[:2]
-        url_host = f'[{host}]' if ':' in host else host
-        print(
-            f"Serving HTTP on {host} port {port} "
-            f"(http://{url_host}:{port}/) ..."
-        )
-        try:
-            httpd.serve_forever()
-        except KeyboardInterrupt:
-            print("\nKeyboard interrupt received, exiting.")
-        finally:
-            httpd.shutdown()
+    return (server.ThreadingHTTPServer, addr, LambdaRequestHandler)
+
+
+def run(httpd):
+    """ Run Lambda Gateway server.
+
+        :param object httpd: ThreadingHTTPServer instance
+    """
+    host, port = httpd.socket.getsockname()[:2]
+    url_host = f'[{host}]' if ':' in host else host
+    print(
+        f'Serving HTTP on {host} port {port} '
+        f'(http://{url_host}:{port}/) ...'
+    )
+    try:
+        httpd.serve_forever()
+    except KeyboardInterrupt:
+        print('\nKeyboard interrupt received, exiting.')
+    finally:
+        httpd.shutdown()
+
+
+def main():
+    """ Main entrypoint. """
+    HTTPServer, addr, Handler = setup()
+    with HTTPServer(addr, Handler) as httpd:
+        run(httpd)
 
 
 if __name__ == '__main__':  # pragma: no cover
-    run()
+    main()

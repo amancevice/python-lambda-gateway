@@ -7,7 +7,7 @@ setup(
     description='Simple HTTP server to invoke a Lambda function locally',
     entry_points={
         'console_scripts': [
-            'lambda-gateway=lambda_gateway.server:run',
+            'lambda-gateway=lambda_gateway.server:main',
         ],
     },
     install_requires=[],
