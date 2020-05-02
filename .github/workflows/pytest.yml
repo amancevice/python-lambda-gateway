@@ -25,19 +25,18 @@ jobs:
       with:
         ruby-version: ${{ matrix.python }}
 
-    - name: setup code climate
+    - name: Setup code climate
       uses: amancevice/code-climate-action@v0
       env:
         CC_TEST_REPORTER_ID: ${{ secrets.CC_TEST_REPORTER_ID }}
       with:
         command: before-build
 
-    - run: pip install pipenv==2018.11.26
-    - run: pipenv install --dev
-    - run: pipenv run flake8
-    - run: pipenv run pytest
+    - run: pip install flake8 pytest pytest-cov
+    - run: flake8
+    - run: pytest
 
-    - name: coverage
+    - name: Send coverage
       uses: amancevice/code-climate-action@v0
       env:
         CC_TEST_REPORTER_ID: ${{ secrets.CC_TEST_REPORTER_ID }}
