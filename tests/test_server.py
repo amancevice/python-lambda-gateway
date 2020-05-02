@@ -1,4 +1,5 @@
 import http
+import types
 from unittest import mock
 
 import pytest
@@ -41,6 +42,20 @@ def test_get_handler_no_file():
 def test_get_handler_no_handler():
     with pytest.raises(SystemExit):
         server.get_handler('lambda_function.not_a_function')
+
+
+@mock.patch('lambda_gateway.server.get_opts')
+def test_setup(mock_opts):
+    mock_opts.return_value = types.SimpleNamespace(
+        HANDLER='lambda_function.lambda_handler',
+        bind=None,
+        port=8000,
+        timeout=30,
+    )
+    server.setup()
+    assert server.LambdaRequestHandler.timeout == 30
+    assert server.LambdaRequestHandler.handler == \
+        'lambda_function.lambda_handler'
 
 
 @mock.patch('http.server.ThreadingHTTPServer')
