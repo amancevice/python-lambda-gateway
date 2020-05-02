@@ -52,4 +52,6 @@ class Context:
     def get_remaining_time_in_millis(self):
         delta = datetime.utcnow() - self._start
         remaining_time_in_s = self._timeout - delta.total_seconds()
+        if remaining_time_in_s < 0:
+            return 0
         return remaining_time_in_s * 1000
