@@ -40,8 +40,7 @@ class LambdaRequestHandler(server.SimpleHTTPRequestHandler):
 
     async def invoke_async(self, event, context=None):
         # await asyncio.sleep(31)
-        handler = getattr(type(self), 'handler', self.default_handler)
-        return handler(event, context)
+        return type(self).handler(event, context)
 
     async def invoke_with_timeout(self, event, context=None):
         try:
