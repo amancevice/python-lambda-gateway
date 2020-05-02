@@ -1,6 +1,9 @@
 # Lambda Gateway
 
+[![pytest](https://github.com/amancevice/python-lambda-gateway/workflows/pytest/badge.svg)](https://github.com/amancevice/python-lambda-gateway/actions)
 [![PyPI Version](https://badge.fury.io/py/lambda-gateway.svg)](https://badge.fury.io/py/lambda-gateway)
+[![Test Coverage](https://api.codeclimate.com/v1/badges/2b52a3e925e07f1f7b36/test_coverage)](https://codeclimate.com/github/amancevice/python-lambda-gateway/test_coverage)
+[![Maintainability](https://api.codeclimate.com/v1/badges/2b52a3e925e07f1f7b36/maintainability)](https://codeclimate.com/github/amancevice/python-lambda-gateway/maintainability)
 
 Test AWS Lambda functions invoked as API Gateway proxy integrations locally.
 
