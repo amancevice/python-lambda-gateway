@@ -5,10 +5,15 @@ from datetime import datetime
 
 @contextmanager
 def start(timeout=None):
+    """ Yield mock Lambda context object. """
     yield Context(timeout)
 
 
 class Context:
+    """ Mock Lambda context object.
+
+        :param int timeout: Lambda timeout in seconds
+    """
     def __init__(self, timeout=None):
         self._start = datetime.utcnow()
         self._timeout = timeout or 30

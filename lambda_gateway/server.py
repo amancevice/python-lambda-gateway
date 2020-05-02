@@ -23,6 +23,11 @@ class LambdaRequestHandler(server.SimpleHTTPRequestHandler):
         self.invoke('POST')
 
     def get_event(self, httpMethod):
+        """ Get Lambda input event object.
+
+            :param str httpMethod: HTTP request method
+            :return dict: Lambda event object
+        """
         # Get body
         try:
             content_length = int(self.headers.get('Content-Length'))
@@ -39,10 +44,22 @@ class LambdaRequestHandler(server.SimpleHTTPRequestHandler):
         }
 
     async def invoke_async(self, event, context=None):
+        """ Wrapper to invoke the Lambda handler asynchronously.
+
+            :param dict event: Lambda event object
+            :param Context context: Mock Lambda context
+            :returns dict: Lamnda invocation result
+        """
         # await asyncio.sleep(31)
         return type(self).handler(event, context)
 
     async def invoke_with_timeout(self, event, context=None):
+        """ Wrapper to invoke the Lambda handler with a timeout.
+
+            :param dict event: Lambda event object
+            :param Context context: Mock Lambda context
+            :returns dict: Lamnda invocation result or 408 TIMEOUT
+        """
         try:
             return await asyncio.wait_for(
                 self.invoke_async(event, context),
@@ -55,6 +72,12 @@ class LambdaRequestHandler(server.SimpleHTTPRequestHandler):
             }
 
     def invoke(self, httpMethod):
+        """ Proxy requests to Lambda handler
+
+            :param dict event: Lambda event object
+            :param Context context: Mock Lambda context
+            :returns dict: Lamnda invocation result
+        """
         # Get Lambda event
         event = self.get_event(httpMethod)
 
@@ -76,14 +99,23 @@ class LambdaRequestHandler(server.SimpleHTTPRequestHandler):
 
     @classmethod
     def set_handler(cls, handler):
+        """ Set Lambda handler for server.
+
+            :param function handler: Lambda handler function
+        """
         cls.handler = handler
 
     @classmethod
     def set_timeout(cls, timeout):
+        """ Set Lambda context timeout.
+
+            :param int timouet: Lambda context timeout in seconds
+        """
         cls.timeout = timeout
 
 
 def get_opts():
+    """ Get CLI options. """
     parser = argparse.ArgumentParser(description='Start a simple PyPI server')
     parser.add_argument(
         '-b', '--base-path',
@@ -115,6 +147,7 @@ def get_opts():
 
 
 def get_url(host, port, base_path=None):
+    """ Get URL of service. """
     url = f'http://{host}'
     if port != 80:
         url += f':{port}'
@@ -125,6 +158,11 @@ def get_url(host, port, base_path=None):
 
 
 def get_handler(signature):
+    """ Load handler function.
+
+        :param str signature: Lambda handler signature (eg, 'index.handler')
+        :returns function: Lambda handler function
+    """
     *path, func = signature.split('.')
     name = '.'.join(path)
     if not name:
@@ -142,6 +180,7 @@ def get_handler(signature):
 
 
 def run():
+    """ Run Lambda Gateway server. """
     opts = get_opts()
     url = get_url(opts.host, opts.port, opts.base_path)
     server_address = (opts.host, opts.port)
