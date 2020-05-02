@@ -1,4 +1,5 @@
 import http
+import sys
 import types
 from unittest import mock
 
@@ -16,6 +17,21 @@ class TestLambdaRequestHandler:
     def test_set_timeout(self):
         server.LambdaRequestHandler.set_timeout(11)
         assert server.LambdaRequestHandler.timeout == 11
+
+
+def test_get_opts():
+    sys.argv = [
+        'lambda-gateway',
+        '-b', '0.0.0.0',
+        '-p', '8888',
+        '-t', '3',
+        'index.handler',
+    ]
+    opts = server.get_opts()
+    assert opts.bind == '0.0.0.0'
+    assert opts.port == 8888
+    assert opts.timeout == 3
+    assert opts.HANDLER == 'index.handler'
 
 
 @pytest.mark.parametrize(
