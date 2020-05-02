@@ -168,12 +168,11 @@ def get_handler(signature):
         raise SystemExit(f"Handler '{func}' missing on module '{name}'")
 
 
-def setup():
+def setup(bind, port, timeout, handler):
     """ Setup server. """
-    opts = get_opts()
-    address_family, addr = server._get_best_family(opts.bind, opts.port)
-    LambdaRequestHandler.set_handler(opts.HANDLER)
-    LambdaRequestHandler.set_timeout(opts.timeout)
+    address_family, addr = server._get_best_family(bind, port)
+    LambdaRequestHandler.set_handler(handler)
+    LambdaRequestHandler.set_timeout(timeout)
     server.ThreadingHTTPServer.address_family = address_family
     return (server.ThreadingHTTPServer, addr, LambdaRequestHandler)
 
@@ -199,7 +198,12 @@ def run(httpd):
 
 def main():
     """ Main entrypoint. """
-    HTTPServer, addr, Handler = setup()
+    opts = get_opts()
+    bind = opts.bind
+    port = opts.port
+    timeout = opts.timeout
+    handler = opts.HANDLER
+    HTTPServer, addr, Handler = setup(bind, port, timeout, handler)
     with HTTPServer(addr, Handler) as httpd:
         run(httpd)
 
