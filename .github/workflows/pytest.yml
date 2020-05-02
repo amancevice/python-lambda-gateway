@@ -1,0 +1,45 @@
+name: pytest
+
+on:
+  pull_request:
+  push:
+    branches:
+    - master
+  schedule:
+  - cron: "11 21 * * *"
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python:
+        - 3.7.7
+        - 3.8.2
+
+    steps:
+
+    - uses: actions/checkout@v1
+
+    - uses: actions/setup-python@v1
+      with:
+        ruby-version: ${{ matrix.python }}
+
+    - name: setup code climate
+      uses: amancevice/code-climate-action@v0
+      env:
+        CC_TEST_REPORTER_ID: ${{ secrets.CC_TEST_REPORTER_ID }}
+      with:
+        command: before-build
+
+    - run: pip install pipenv==2018.11.26
+    - run: pipenv install --dev
+    - run: pipenv run flake8
+    - run: pipenv run pytest
+
+    - name: coverage
+      uses: amancevice/code-climate-action@v0
+      env:
+        CC_TEST_REPORTER_ID: ${{ secrets.CC_TEST_REPORTER_ID }}
+      with:
+        command: after-build -t simplecov
