@@ -6,7 +6,6 @@ import asyncio
 import importlib
 import json
 import os
-import socketserver
 from http import server
 
 from lambda_gateway import lambda_context
@@ -22,22 +21,22 @@ class LambdaRequestHandler(server.SimpleHTTPRequestHandler):
     def do_POST(self):
         self.invoke('POST')
 
+    def get_body(self):
+        """ Get request body to forward to Lambda handler. """
+        try:
+            content_length = int(self.headers.get('Content-Length'))
+            return self.rfile.read(content_length).decode()
+        except TypeError:
+            return ''
+
     def get_event(self, httpMethod):
         """ Get Lambda input event object.
 
             :param str httpMethod: HTTP request method
             :return dict: Lambda event object
         """
-        # Get body
-        try:
-            content_length = int(self.headers.get('Content-Length'))
-            body = self.rfile.read(content_length).decode()
-        except TypeError:
-            body = ''
-
-        # Construct event
         return {
-            'body': body,
+            'body': self.get_body(),
             'headers': dict(self.headers),
             'httpMethod': httpMethod,
             'path': self.path,
@@ -51,7 +50,8 @@ class LambdaRequestHandler(server.SimpleHTTPRequestHandler):
             :returns dict: Lamnda invocation result
         """
         # await asyncio.sleep(31)
-        return type(self).handler(event, context)
+        handler = get_handler(self.handler)
+        return handler(event, context)
 
     async def invoke_with_timeout(self, event, context=None):
         """ Wrapper to invoke the Lambda handler with a timeout.
@@ -116,23 +116,20 @@ class LambdaRequestHandler(server.SimpleHTTPRequestHandler):
 
 def get_opts():
     """ Get CLI options. """
-    parser = argparse.ArgumentParser(description='Start a simple PyPI server')
-    parser.add_argument(
-        '-b', '--base-path',
-        dest='base_path',
-        help='Base path.',
+    parser = argparse.ArgumentParser(
+        description='Start a simple Lambda Gateway server',
     )
     parser.add_argument(
-        '-H', '--host',
-        dest='host',
-        default='localhost',
-        help='Hostname.',
+        '-b', '--bind',
+        dest='bind',
+        metavar='ADDRESS',
+        help='Specify alternate bind address [default: all interfaces]',
     )
     parser.add_argument(
         '-p', '--port',
         dest='port',
-        default='8000',
-        help='Port number.',
+        default=8000,
+        help='Specify alternate port [default: 8000]',
         type=int,
     )
     parser.add_argument(
@@ -142,19 +139,11 @@ def get_opts():
         help='Lambda timeout.',
         type=int,
     )
-    parser.add_argument('HANDLER', help='Lambda handler signature.')
+    parser.add_argument(
+        'HANDLER',
+        help='Lambda handler signature',
+    )
     return parser.parse_args()
-
-
-def get_url(host, port, base_path=None):
-    """ Get URL of service. """
-    url = f'http://{host}'
-    if port != 80:
-        url += f':{port}'
-    if base_path:
-        url += f'/{base_path}'
-    url += '/'
-    return url
 
 
 def get_handler(signature):
@@ -182,16 +171,21 @@ def get_handler(signature):
 def run():
     """ Run Lambda Gateway server. """
     opts = get_opts()
-    url = get_url(opts.host, opts.port, opts.base_path)
-    server_address = (opts.host, opts.port)
-    LambdaRequestHandler.set_handler(get_handler(opts.HANDLER))
+    address_family, addr = server._get_best_family(opts.bind, opts.port)
+    LambdaRequestHandler.set_handler(opts.HANDLER)
     LambdaRequestHandler.set_timeout(opts.timeout)
-    with socketserver.TCPServer(server_address, LambdaRequestHandler) as httpd:
-        print(f'Starting LambdaRequestHandler at {url}')
+    server.ThreadingHTTPServer.address_family = address_family
+    with server.ThreadingHTTPServer(addr, LambdaRequestHandler) as httpd:
+        host, port = httpd.socket.getsockname()[:2]
+        url_host = f'[{host}]' if ':' in host else host
+        print(
+            f"Serving HTTP on {host} port {port} "
+            f"(http://{url_host}:{port}/) ..."
+        )
         try:
             httpd.serve_forever()
         except KeyboardInterrupt:
-            print('\nStopping LambdaRequestHandler')
+            print("\nKeyboard interrupt received, exiting.")
         finally:
             httpd.shutdown()
 

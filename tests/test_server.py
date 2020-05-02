@@ -5,29 +5,13 @@ from lambda_gateway import server
 
 class TestLambdaRequestHandler:
     def test_set_handler(self):
-        def func(event, context):
-            pass
-
-        server.LambdaRequestHandler.set_handler(func)
-        assert server.LambdaRequestHandler.handler == func
+        handler = 'lambda_function.lambda_handler'
+        server.LambdaRequestHandler.set_handler(handler)
+        assert server.LambdaRequestHandler.handler == handler
 
     def test_set_timeout(self):
         server.LambdaRequestHandler.set_timeout(11)
         assert server.LambdaRequestHandler.timeout == 11
-
-
-@pytest.mark.parametrize(
-    ('host', 'port', 'base_path', 'exp'),
-    [
-        ('localhost', 8000, None, 'http://localhost:8000/'),
-        ('localhost', 80, None, 'http://localhost/'),
-        ('localhost', 8000, 'base', 'http://localhost:8000/base/'),
-        ('localhost', 80, 'base', 'http://localhost/base/'),
-    ]
-)
-def test_get_url(host, port, base_path, exp):
-    ret = server.get_url(host, port, base_path)
-    assert ret == exp
 
 
 @pytest.mark.parametrize(

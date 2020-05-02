@@ -1,4 +1,5 @@
-import time
+from datetime import timedelta
+
 from lambda_gateway import lambda_context
 
 
@@ -41,5 +42,5 @@ def test_log_stream_name():
 def test_get_remaining_time_in_millis():
     context = lambda_context.Context(1)
     assert 0 < context.get_remaining_time_in_millis() < 1000
-    time.sleep(1)
+    context._start -= timedelta(seconds=1)
     assert context.get_remaining_time_in_millis() == 0
