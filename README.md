@@ -1,5 +1,7 @@
 # Lambda Gateway
 
+[![PyPI Version](https://badge.fury.io/py/lambda-gateway.svg)](https://badge.fury.io/py/lambda-gateway)
+
 Test AWS Lambda functions invoked as API Gateway proxy integrations locally.
 
 This tool extends the native Python SimpleHTTPRequestHandler to proxy requests to a local Lambda function.
