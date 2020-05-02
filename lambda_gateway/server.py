@@ -2,13 +2,31 @@
 # usage:
 #   python server.py --help
 import argparse
+import asyncio
 import importlib
+import json
 import os
 import socketserver
 from http import server
 
 
 class LambdaRequestHandler(server.SimpleHTTPRequestHandler):
+    async def invoke_async(self, event, context=None):
+        handler = getattr(type(self), 'handler', self.default_handler)
+        return handler(event, context)
+
+    async def invoke_with_timeout(self, event, context=None):
+        try:
+            return await asyncio.wait_for(
+                self.invoke_async(event, context),
+                self.timeout,
+            )
+        except asyncio.TimeoutError:
+            return {
+                'body': json.dumps({'Error': 'TIMEOUT'}),
+                'statusCode': 408,
+            }
+
     def invoke(self, httpMethod):
         # Get body
         try:
@@ -26,10 +44,11 @@ class LambdaRequestHandler(server.SimpleHTTPRequestHandler):
         }
 
         # Get response
-        response = LambdaRequestHandler.handler(event)
-        status = response.get('statusCode')
-        headers = response.get('headers')
-        body = response.get('body')
+        context = None
+        res = asyncio.run(self.invoke_with_timeout(event, context))
+        status = res.get('statusCode', 500)
+        headers = res.get('headers', {})
+        body = res.get('body', '')
 
         # Send response
         self.send_response(status)
@@ -46,6 +65,19 @@ class LambdaRequestHandler(server.SimpleHTTPRequestHandler):
 
     def do_POST(self):
         self.invoke('POST')
+
+    @classmethod
+    def set_handler(cls, handler):
+        cls.handler = handler
+
+    @classmethod
+    def set_timeout(cls, timeout):
+        cls.timeout = timeout
+
+    @staticmethod
+    async def default_handler(event, context=None):
+        print(f'EVENT {json.dumps(event)}')
+        return {'statusCode': 204}
 
 
 def get_opts():
@@ -66,6 +98,12 @@ def get_opts():
         dest='port',
         default='8000',
         help='Port number.',
+        type=int,
+    )
+    parser.add_argument(
+        '-t', '--timeout',
+        dest='timeout',
+        help='Lambda timeout.',
         type=int,
     )
     parser.add_argument('HANDLER', help='Lambda handler signature.')
@@ -103,7 +141,8 @@ def run():
     opts = get_opts()
     url = get_url(opts.host, opts.port, opts.base_path)
     server_address = (opts.host, opts.port)
-    LambdaRequestHandler.handler = get_handler(opts.HANDLER)
+    LambdaRequestHandler.set_handler(get_handler(opts.HANDLER))
+    LambdaRequestHandler.set_timeout(opts.timeout)
     with socketserver.TCPServer(server_address, LambdaRequestHandler) as httpd:
         print(f'Starting LambdaRequestHandler at {url}')
         try:
