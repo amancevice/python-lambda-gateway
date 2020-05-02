@@ -9,9 +9,37 @@ import os
 import socketserver
 from http import server
 
+from lambda_gateway import lambda_context
+
 
 class LambdaRequestHandler(server.SimpleHTTPRequestHandler):
+    def do_GET(self):
+        self.invoke('GET')
+
+    def do_HEAD(self):
+        self.invoke('HEAD')
+
+    def do_POST(self):
+        self.invoke('POST')
+
+    def get_event(self, httpMethod):
+        # Get body
+        try:
+            content_length = int(self.headers.get('Content-Length'))
+            body = self.rfile.read(content_length).decode()
+        except TypeError:
+            body = ''
+
+        # Construct event
+        return {
+            'body': body,
+            'headers': dict(self.headers),
+            'httpMethod': httpMethod,
+            'path': self.path,
+        }
+
     async def invoke_async(self, event, context=None):
+        # await asyncio.sleep(31)
         handler = getattr(type(self), 'handler', self.default_handler)
         return handler(event, context)
 
@@ -28,24 +56,14 @@ class LambdaRequestHandler(server.SimpleHTTPRequestHandler):
             }
 
     def invoke(self, httpMethod):
-        # Get body
-        try:
-            content_length = int(self.headers.get('Content-Length'))
-            body = self.rfile.read(content_length).decode()
-        except TypeError:
-            body = ''
+        # Get Lambda event
+        event = self.get_event(httpMethod)
 
-        # Construct event
-        event = {
-            'body': body,
-            'headers': dict(self.headers),
-            'httpMethod': httpMethod,
-            'path': self.path,
-        }
+        # Get Lambda result
+        with lambda_context.start(self.timeout) as context:
+            res = asyncio.run(self.invoke_with_timeout(event, context))
 
-        # Get response
-        context = None
-        res = asyncio.run(self.invoke_with_timeout(event, context))
+        # Parse response
         status = res.get('statusCode', 500)
         headers = res.get('headers', {})
         body = res.get('body', '')
@@ -57,15 +75,6 @@ class LambdaRequestHandler(server.SimpleHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body.encode())
 
-    def do_GET(self):
-        self.invoke('GET')
-
-    def do_HEAD(self):
-        self.invoke('HEAD')
-
-    def do_POST(self):
-        self.invoke('POST')
-
     @classmethod
     def set_handler(cls, handler):
         cls.handler = handler
@@ -73,11 +82,6 @@ class LambdaRequestHandler(server.SimpleHTTPRequestHandler):
     @classmethod
     def set_timeout(cls, timeout):
         cls.timeout = timeout
-
-    @staticmethod
-    async def default_handler(event, context=None):
-        print(f'EVENT {json.dumps(event)}')
-        return {'statusCode': 204}
 
 
 def get_opts():
@@ -103,6 +107,7 @@ def get_opts():
     parser.add_argument(
         '-t', '--timeout',
         dest='timeout',
+        default=30,
         help='Lambda timeout.',
         type=int,
     )
