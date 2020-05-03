@@ -12,6 +12,7 @@ from lambda_gateway import lambda_context
 
 
 class LambdaRequestHandler(server.SimpleHTTPRequestHandler):
+    base_path = None
     timeout = 30
 
     def do_GET(self):
@@ -51,7 +52,12 @@ class LambdaRequestHandler(server.SimpleHTTPRequestHandler):
             :param Context context: Mock Lambda context
             :returns dict: Lamnda invocation result
         """
-        # await asyncio.sleep(31)
+
+        # Reject request if not starting at base path
+        if not self.path.startswith(self.get_base_path()):
+            return get_json_response(event, 403, message='Forbidden')
+
+        # Get & invoke Lambda handler
         handler = get_handler(self.handler)
         return handler(event, context)
 
@@ -66,10 +72,7 @@ class LambdaRequestHandler(server.SimpleHTTPRequestHandler):
             coroutine = self.invoke_async(event, context)
             return await asyncio.wait_for(coroutine, self.timeout)
         except asyncio.TimeoutError:
-            return {
-                'body': json.dumps({'Error': 'TIMEOUT'}),
-                'statusCode': 408,
-            }
+            return get_json_response(event, 408, message='Timeout')
 
     def invoke(self, httpMethod):
         """ Proxy requests to Lambda handler
@@ -98,6 +101,19 @@ class LambdaRequestHandler(server.SimpleHTTPRequestHandler):
         self.wfile.write(body.encode())
 
     @classmethod
+    def get_base_path(cls):
+        """ Get base path. """
+        return os.path.join('/', str(cls.base_path or ''))
+
+    @classmethod
+    def set_base_path(cls, base_path):
+        """ Set base path for REST API.
+
+            :param function handler: Lambda handler function
+        """
+        cls.base_path = base_path
+
+    @classmethod
     def set_handler(cls, handler):
         """ Set Lambda handler for server.
 
@@ -114,10 +130,32 @@ class LambdaRequestHandler(server.SimpleHTTPRequestHandler):
         cls.timeout = timeout
 
 
+def get_json_response(event, statusCode, **kwargs):
+    if event['httpMethod'] in ['HEAD']:
+        body = ''
+        size = 0
+    else:
+        body = json.dumps(kwargs)
+        size = len(body)
+    return {
+        'body': body,
+        'statusCode': statusCode,
+        'headers': {
+            'Content-Type': 'application/json',
+            'Content-Length': size,
+        },
+    }
+
+
 def get_opts():
     """ Get CLI options. """
     parser = argparse.ArgumentParser(
         description='Start a simple Lambda Gateway server',
+    )
+    parser.add_argument(
+        '-B', '--base-path',
+        dest='base_path',
+        help='Set base path for REST API',
     )
     parser.add_argument(
         '-b', '--bind',
@@ -168,9 +206,17 @@ def get_handler(signature):
         raise SystemExit(f"Handler '{func}' missing on module '{name}'")
 
 
-def setup(bind, port, timeout, handler):
-    """ Setup server. """
+def setup(bind, port, base_path, timeout, handler):
+    """ Setup server.
+
+        :param str bind: Bind address
+        :param int port: Port number
+        :param str base_path: REST API base path
+        :param int timeout: Lambda hanlder timeout in seconds
+        :param str handler: Lambda handler signature
+    """
     address_family, addr = server._get_best_family(bind, port)
+    LambdaRequestHandler.set_base_path(base_path)
     LambdaRequestHandler.set_handler(handler)
     LambdaRequestHandler.set_timeout(timeout)
     server.ThreadingHTTPServer.address_family = address_family
@@ -199,11 +245,12 @@ def run(httpd):
 def main():
     """ Main entrypoint. """
     opts = get_opts()
+    base_path = opts.base_path
     bind = opts.bind
     port = opts.port
     timeout = opts.timeout
     handler = opts.HANDLER
-    HTTPServer, addr, Handler = setup(bind, port, timeout, handler)
+    HTTPServer, addr, Handler = setup(bind, port, base_path, timeout, handler)
     with HTTPServer(addr, Handler) as httpd:
         run(httpd)
 

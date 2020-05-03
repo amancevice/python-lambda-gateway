@@ -14,7 +14,9 @@ from lambda_gateway.server import LambdaRequestHandler as Handler
 class TestLambdaRequestHandler:
     def setup(self):
         self.subject = mock.Mock(Handler)
+        self.subject.base_path = None
         self.subject.timeout = 30
+        self.subject.get_base_path.return_value = '/'
 
         body = json.dumps({'data': 'POST_DATA'})
         self.reqs = {
@@ -53,6 +55,29 @@ class TestLambdaRequestHandler:
         self.subject.path = req['path']
         self.subject.rfile = io.BytesIO(req['body'].encode())
         self.subject.wfile = io.BytesIO()
+
+    @pytest.mark.parametrize(
+        ('base_path', 'exp'),
+        [
+            (None, '/'),
+            ('simple', '/simple'),
+        ],
+    )
+    def test_get_base_path(self, base_path, exp):
+        Handler.base_path = base_path
+        ret = Handler.get_base_path()
+        assert ret == exp
+
+    @pytest.mark.parametrize(
+        ('base_path', 'exp'),
+        [
+            (None, None),
+            ('simple', 'simple'),
+        ],
+    )
+    def test_set_base_path(self, base_path, exp):
+        Handler.set_base_path(base_path)
+        assert Handler.base_path == base_path
 
     def test_set_handler(self):
         handler = 'lambda_function.lambda_handler'
@@ -99,6 +124,17 @@ class TestLambdaRequestHandler:
             assert ret == self.res
 
     @pytest.mark.parametrize('verb', ['GET', 'HEAD', 'POST'])
+    def test_invoke_async_base_path(self, verb):
+        self.subject.get_base_path.return_value = '/simple'
+        req = self.reqs[verb]
+        self.set_request(req)
+
+        with mock.patch('lambda_gateway.server.get_handler'):
+            ret = asyncio.run(Handler.invoke_async(self.subject, req))
+            exp = server.get_json_response(req, 403, message='Forbidden')
+            assert ret == exp
+
+    @pytest.mark.parametrize('verb', ['GET', 'HEAD', 'POST'])
     def test_invoke_with_timeout(self, verb):
         req = self.reqs[verb]
         self.set_request(req)
@@ -109,34 +145,31 @@ class TestLambdaRequestHandler:
     def test_invoke_with_timeout_err(self, verb):
         req = self.reqs[verb]
         self.set_request(req)
-        with mock.patch('asyncio.wait_for') as mock_wait:
-            mock_wait.side_effect = asyncio.TimeoutError
-            ret = asyncio.run(Handler.invoke_with_timeout(self.subject, req))
-            exp = {
-                'body': json.dumps({'Error': 'TIMEOUT'}),
-                'statusCode': 408,
-            }
-            assert ret == exp
+        exp = server.get_json_response(req, 408, message='Timeout')
+        self.subject.invoke_async.side_effect = asyncio.TimeoutError
+        exe = Handler.invoke_with_timeout(self.subject, req, None)
+        ret = asyncio.run(exe)
+        assert ret == exp
 
+    # @pytest.mark.skip()
     @pytest.mark.parametrize('verb', ['GET', 'HEAD', 'POST'])
     def test_invoke(self, verb):
         req = self.reqs[verb]
         self.set_request(req)
-        with mock.patch('asyncio.run') as mock_run:
-            mock_run.return_value = self.res
-            Handler.invoke(self.subject, verb)
-            self.subject.get_event.assert_called_once_with(verb)
-            self.subject.send_response.assert_called_once_with(
-                self.res['statusCode'],
-            )
-            self.subject.send_header.assert_has_calls([
-                mock.call(*x) for x in self.res['headers'].items()
-            ])
-            self.subject.end_headers.assert_called_once_with()
-            self.subject.wfile.seek(0)
-            ret = self.subject.wfile.read().decode()
-            exp = self.res['body']
-            assert ret == exp
+        self.subject.invoke_with_timeout.return_value = self.res
+        Handler.invoke(self.subject, verb)
+        self.subject.get_event.assert_called_once_with(verb)
+        self.subject.send_response.assert_called_once_with(
+            self.res['statusCode'],
+        )
+        self.subject.send_header.assert_has_calls([
+            mock.call(*x) for x in self.res['headers'].items()
+        ])
+        self.subject.end_headers.assert_called_once_with()
+        self.subject.wfile.seek(0)
+        ret = self.subject.wfile.read().decode()
+        exp = self.res['body']
+        assert ret == exp
 
 
 def test_get_opts():
@@ -180,8 +213,9 @@ def test_get_handler_no_handler():
         server.get_handler('lambda_function.not_a_function')
 
 
-def test_setup():
-    server.setup('0.0.0.0', 8000, 30, 'index.handler')
+@pytest.mark.parametrize('base_path', [None, 'simple'])
+def test_setup(base_path):
+    server.setup('0.0.0.0', 8000, base_path, 30, 'index.handler')
     assert Handler.timeout == 30
     assert Handler.handler == 'index.handler'
 
