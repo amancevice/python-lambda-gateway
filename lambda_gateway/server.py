@@ -12,6 +12,8 @@ from lambda_gateway import lambda_context
 
 
 class LambdaRequestHandler(server.SimpleHTTPRequestHandler):
+    timeout = 30
+
     def do_GET(self):
         self.invoke('GET')
 
@@ -61,10 +63,8 @@ class LambdaRequestHandler(server.SimpleHTTPRequestHandler):
             :returns dict: Lamnda invocation result or 408 TIMEOUT
         """
         try:
-            return await asyncio.wait_for(
-                self.invoke_async(event, context),
-                self.timeout,
-            )
+            coroutine = self.invoke_async(event, context)
+            return await asyncio.wait_for(coroutine, self.timeout)
         except asyncio.TimeoutError:
             return {
                 'body': json.dumps({'Error': 'TIMEOUT'}),

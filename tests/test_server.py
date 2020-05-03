@@ -13,12 +13,46 @@ from lambda_gateway.server import LambdaRequestHandler as Handler
 
 class TestLambdaRequestHandler:
     def setup(self):
-        self.body = json.dumps({'text': 'py.test'})
         self.subject = mock.Mock(Handler)
-        self.subject.headers = {'Content-Length': len(self.body)}
-        self.subject.path = '/'
-        self.subject.rfile = io.BytesIO(self.body.encode())
         self.subject.timeout = 30
+
+        body = json.dumps({'data': 'POST_DATA'})
+        self.reqs = {
+            'GET': {
+                'body': '',
+                'httpMethod': 'GET',
+                'path': '/',
+                'headers': {},
+            },
+            'HEAD': {
+                'body': '',
+                'httpMethod': 'HEAD',
+                'path': '/',
+                'headers': {},
+            },
+            'POST': {
+                'body': body,
+                'httpMethod': 'POST',
+                'path': '/',
+                'headers': {
+                    'Content-Length': len(body),
+                }
+            }
+        }
+
+        self.res = {
+            'body': json.dumps({'fizz': 'buzz'}),
+            'statusCode': 200,
+            'headers': {
+                'Content-Type': 'application/json',
+            },
+        }
+
+    def set_request(self, req):
+        self.subject.headers = req['headers']
+        self.subject.path = req['path']
+        self.subject.rfile = io.BytesIO(req['body'].encode())
+        self.subject.wfile = io.BytesIO()
 
     def test_set_handler(self):
         handler = 'lambda_function.lambda_handler'
@@ -35,56 +69,74 @@ class TestLambdaRequestHandler:
         func(self.subject)
         self.subject.invoke.assert_called_once_with(verb)
 
-    def test_get_body(self):
-        assert Handler.get_body(self.subject) == self.body
-
-    def test_get_body_err(self):
-        self.subject.headers = {}
-        assert Handler.get_body(self.subject) == ''
+    @pytest.mark.parametrize('verb', ['GET', 'HEAD', 'POST'])
+    def test_get_body(self, verb):
+        req = self.reqs[verb]
+        self.set_request(req)
+        ret = Handler.get_body(self.subject)
+        assert ret == req['body']
 
     @pytest.mark.parametrize('verb', ['GET', 'HEAD', 'POST'])
     def test_get_event(self, verb):
-        self.subject.get_body.return_value = self.body
+        req = self.reqs[verb]
+        self.set_request(req)
+        self.subject.get_body.return_value = req['body']
         ret = Handler.get_event(self.subject, verb)
-        exp = {
-            'body': self.body,
-            'headers': self.subject.headers,
-            'httpMethod': verb,
-            'path': '/',
-        }
-        assert ret == exp
+        assert ret == req
 
-    @mock.patch('lambda_gateway.server.get_handler')
-    def test_invoke_async(self, mock_get_handler):
+    @pytest.mark.parametrize('verb', ['GET', 'HEAD', 'POST'])
+    def test_invoke_async(self, verb):
+        req = self.reqs[verb]
+        self.set_request(req)
 
-        def handler(event, context=None):
-            return event
+        with mock.patch('lambda_gateway.server.get_handler') as mock_handler:
 
-        mock_get_handler.return_value = handler
-        evt = {'text': 'py.test'}
-        cor = Handler.invoke_async(self.subject, evt)
-        ret = asyncio.run(cor)
-        assert ret == evt
+            def handler(event, context=None):
+                return self.res
 
-    def test_invoke_with_timeout(self):
-        evt = {'text': 'py.test'}
-        self.subject.invoke_async.return_value = evt
-        ret = asyncio.run(Handler.invoke_with_timeout(self.subject, evt))
-        self.subject.invoke_async.assert_awaited_once_with(evt, None)
-        assert ret == evt
+            mock_handler.return_value = handler
+            ret = asyncio.run(Handler.invoke_async(self.subject, req))
+            assert ret == self.res
 
-    @mock.patch('asyncio.wait_for')
-    def test_invoke_with_timeout_err(self, mock_wait):
-        mock_wait.side_effect = asyncio.TimeoutError
-        evt = {'text': 'py.test'}
-        ret = asyncio.run(Handler.invoke_with_timeout(self.subject, evt))
-        assert ret == {
-            'body': json.dumps({'Error': 'TIMEOUT'}),
-            'statusCode': 408,
-        }
+    @pytest.mark.parametrize('verb', ['GET', 'HEAD', 'POST'])
+    def test_invoke_with_timeout(self, verb):
+        req = self.reqs[verb]
+        self.set_request(req)
+        asyncio.run(Handler.invoke_with_timeout(self.subject, req))
+        self.subject.invoke_async.assert_awaited_once_with(req, None)
 
-    def test_invoke(self):
-        pass
+    @pytest.mark.parametrize('verb', ['GET', 'HEAD', 'POST'])
+    def test_invoke_with_timeout_err(self, verb):
+        req = self.reqs[verb]
+        self.set_request(req)
+        with mock.patch('asyncio.wait_for') as mock_wait:
+            mock_wait.side_effect = asyncio.TimeoutError
+            ret = asyncio.run(Handler.invoke_with_timeout(self.subject, req))
+            exp = {
+                'body': json.dumps({'Error': 'TIMEOUT'}),
+                'statusCode': 408,
+            }
+            assert ret == exp
+
+    @pytest.mark.parametrize('verb', ['GET', 'HEAD', 'POST'])
+    def test_invoke(self, verb):
+        req = self.reqs[verb]
+        self.set_request(req)
+        with mock.patch('asyncio.run') as mock_run:
+            mock_run.return_value = self.res
+            Handler.invoke(self.subject, verb)
+            self.subject.get_event.assert_called_once_with(verb)
+            self.subject.send_response.assert_called_once_with(
+                self.res['statusCode'],
+            )
+            self.subject.send_header.assert_has_calls([
+                mock.call(*x) for x in self.res['headers'].items()
+            ])
+            self.subject.end_headers.assert_called_once_with()
+            self.subject.wfile.seek(0)
+            ret = self.subject.wfile.read().decode()
+            exp = self.res['body']
+            assert ret == exp
 
 
 def test_get_opts():
