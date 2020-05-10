@@ -247,7 +247,7 @@ def run(httpd, base_path='/'):
 def main():
     """ Main entrypoint. """
     opts = get_opts()
-    base_path = os.path.join('/', str(opts.base_path or ''), '/')
+    base_path = os.path.join('/', str(opts.base_path or ''), '')
     bind = opts.bind
     port = opts.port
     timeout = opts.timeout

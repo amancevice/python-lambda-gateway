@@ -253,6 +253,7 @@ def test_run_int(mock_httpd):
 @mock.patch('lambda_gateway.server.setup')
 @mock.patch('lambda_gateway.server.get_opts')
 def test_main(mock_opts, mock_setup, mock_run, mock_httpd):
+    mock_opts.return_value.base_path = 'simple'
     mock_httpd.return_value = '<httpd>'
     mock_setup.return_value = (
         http.server.ThreadingHTTPServer,
@@ -260,4 +261,4 @@ def test_main(mock_opts, mock_setup, mock_run, mock_httpd):
         Handler,
     )
     server.main()
-    mock_run.assert_called_once_with('<httpd>', '/')
+    mock_run.assert_called_once_with('<httpd>', '/simple/')
