@@ -6,6 +6,7 @@ import asyncio
 import importlib
 import json
 import os
+import sys
 from http import server
 
 from lambda_gateway import lambda_context
@@ -52,14 +53,19 @@ class LambdaRequestHandler(server.SimpleHTTPRequestHandler):
             :param Context context: Mock Lambda context
             :returns dict: Lamnda invocation result
         """
-
         # Reject request if not starting at base path
-        if not self.path.startswith(self.get_base_path()):
+        if not self.path.startswith(self.base_path):
             return get_json_response(event, 403, message='Forbidden')
 
         # Get & invoke Lambda handler
-        handler = get_handler(self.handler)
-        return handler(event, context)
+        try:
+            handler = get_handler(self.handler)
+            loop = asyncio.get_running_loop()
+            return await loop.run_in_executor(None, handler, event, context)
+        except Exception as err:
+            sys.stderr.write(f'{err}\n')
+            return get_json_response(
+                event, 502, message='Internal server error')
 
     async def invoke_with_timeout(self, event, context=None):
         """ Wrapper to invoke the Lambda handler with a timeout.
@@ -72,7 +78,8 @@ class LambdaRequestHandler(server.SimpleHTTPRequestHandler):
             coroutine = self.invoke_async(event, context)
             return await asyncio.wait_for(coroutine, self.timeout)
         except asyncio.TimeoutError:
-            return get_json_response(event, 408, message='Timeout')
+            return get_json_response(
+                event, 504, message='Endpoint request timed out')
 
     def invoke(self, httpMethod):
         """ Proxy requests to Lambda handler
@@ -99,11 +106,6 @@ class LambdaRequestHandler(server.SimpleHTTPRequestHandler):
             self.send_header(key, val)
         self.end_headers()
         self.wfile.write(body.encode())
-
-    @classmethod
-    def get_base_path(cls):
-        """ Get base path. """
-        return os.path.join('/', str(cls.base_path or ''))
 
     @classmethod
     def set_base_path(cls, base_path):
@@ -192,7 +194,7 @@ def get_handler(signature):
     *path, func = signature.split('.')
     name = '.'.join(path)
     if not name:
-        raise SystemExit(f"Bad handler signature '{signature}'")
+        raise ValueError(f"Bad handler signature '{signature}'")
     try:
         pypath = os.path.join(os.path.curdir, f'{name}.py')
         spec = importlib.util.spec_from_file_location(name, pypath)
@@ -200,9 +202,9 @@ def get_handler(signature):
         spec.loader.exec_module(module)
         return getattr(module, func)
     except FileNotFoundError:
-        raise SystemExit(f"Unable to import module '{name}'")
+        raise ValueError(f"Unable to import module '{name}'")
     except AttributeError:
-        raise SystemExit(f"Handler '{func}' missing on module '{name}'")
+        raise ValueError(f"Handler '{func}' missing on module '{name}'")
 
 
 def setup(bind, port, base_path, timeout, handler):
@@ -222,21 +224,22 @@ def setup(bind, port, base_path, timeout, handler):
     return (server.ThreadingHTTPServer, addr, LambdaRequestHandler)
 
 
-def run(httpd):
+def run(httpd, base_path='/'):
     """ Run Lambda Gateway server.
 
         :param object httpd: ThreadingHTTPServer instance
+        :param str base_path: REST API base path
     """
     host, port = httpd.socket.getsockname()[:2]
     url_host = f'[{host}]' if ':' in host else host
-    print(
+    sys.stderr.write(
         f'Serving HTTP on {host} port {port} '
-        f'(http://{url_host}:{port}/) ...'
+        f'(http://{url_host}:{port}{base_path}) ...\n'
     )
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:
-        print('\nKeyboard interrupt received, exiting.')
+        sys.stderr.write('\nKeyboard interrupt received, exiting.\n')
     finally:
         httpd.shutdown()
 
@@ -244,14 +247,14 @@ def run(httpd):
 def main():
     """ Main entrypoint. """
     opts = get_opts()
-    base_path = opts.base_path
+    base_path = os.path.join('/', str(opts.base_path or ''), '/')
     bind = opts.bind
     port = opts.port
     timeout = opts.timeout
     handler = opts.HANDLER
     HTTPServer, addr, Handler = setup(bind, port, base_path, timeout, handler)
     with HTTPServer(addr, Handler) as httpd:
-        run(httpd)
+        run(httpd, base_path)
 
 
 if __name__ == '__main__':  # pragma: no cover

@@ -16,7 +16,7 @@ class TestLambdaRequestHandler:
         self.subject = mock.Mock(Handler)
         self.subject.base_path = None
         self.subject.timeout = 30
-        self.subject.get_base_path.return_value = '/'
+        self.subject.base_path = '/'
 
         body = json.dumps({'data': 'POST_DATA'})
         self.reqs = {
@@ -55,18 +55,6 @@ class TestLambdaRequestHandler:
         self.subject.path = req['path']
         self.subject.rfile = io.BytesIO(req['body'].encode())
         self.subject.wfile = io.BytesIO()
-
-    @pytest.mark.parametrize(
-        ('base_path', 'exp'),
-        [
-            (None, '/'),
-            ('simple', '/simple'),
-        ],
-    )
-    def test_get_base_path(self, base_path, exp):
-        Handler.base_path = base_path
-        ret = Handler.get_base_path()
-        assert ret == exp
 
     @pytest.mark.parametrize(
         ('base_path', 'exp'),
@@ -124,8 +112,19 @@ class TestLambdaRequestHandler:
             assert ret == self.res
 
     @pytest.mark.parametrize('verb', ['GET', 'HEAD', 'POST'])
+    def test_invoke_async_err(self, verb):
+        req = self.reqs[verb]
+        self.set_request(req)
+
+        with mock.patch('lambda_gateway.server.get_handler') as mock_handler:
+            mock_handler.side_effect = Exception
+            ret = asyncio.run(Handler.invoke_async(self.subject, req))
+            assert ret == server.get_json_response(
+                req, 502, message='Internal server error')
+
+    @pytest.mark.parametrize('verb', ['GET', 'HEAD', 'POST'])
     def test_invoke_async_base_path(self, verb):
-        self.subject.get_base_path.return_value = '/simple'
+        self.subject.base_path = '/simple'
         req = self.reqs[verb]
         self.set_request(req)
 
@@ -145,7 +144,8 @@ class TestLambdaRequestHandler:
     def test_invoke_with_timeout_err(self, verb):
         req = self.reqs[verb]
         self.set_request(req)
-        exp = server.get_json_response(req, 408, message='Timeout')
+        exp = server.get_json_response(
+            req, 504, message='Endpoint request timed out')
         self.subject.invoke_async.side_effect = asyncio.TimeoutError
         exe = Handler.invoke_with_timeout(self.subject, req, None)
         ret = asyncio.run(exe)
@@ -211,17 +211,17 @@ def test_get_handler(signature, exp):
 
 
 def test_get_handler_bad_sig():
-    with pytest.raises(SystemExit):
+    with pytest.raises(ValueError):
         server.get_handler('lambda_function')
 
 
 def test_get_handler_no_file():
-    with pytest.raises(SystemExit):
+    with pytest.raises(ValueError):
         server.get_handler('not_a_file.handler')
 
 
 def test_get_handler_no_handler():
-    with pytest.raises(SystemExit):
+    with pytest.raises(ValueError):
         server.get_handler('lambda_function.not_a_function')
 
 
@@ -260,4 +260,4 @@ def test_main(mock_opts, mock_setup, mock_run, mock_httpd):
         Handler,
     )
     server.main()
-    mock_run.assert_called_once_with('<httpd>')
+    mock_run.assert_called_once_with('<httpd>', '/')
