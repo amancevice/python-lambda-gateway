@@ -173,7 +173,6 @@ def get_opts():
     parser.add_argument(
         '-t', '--timeout',
         dest='timeout',
-        default=30,
         help='Lambda timeout.',
         type=int,
     )

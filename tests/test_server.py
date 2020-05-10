@@ -172,6 +172,18 @@ class TestLambdaRequestHandler:
         assert ret == exp
 
 
+def test_get_opts_default():
+    sys.argv = [
+        'lambda-gateway',
+        'index.handler',
+    ]
+    opts = server.get_opts()
+    assert opts.bind is None
+    assert opts.port == 8000
+    assert opts.timeout is None
+    assert opts.HANDLER == 'index.handler'
+
+
 def test_get_opts():
     sys.argv = [
         'lambda-gateway',
