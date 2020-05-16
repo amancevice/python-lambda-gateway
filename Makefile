@@ -2,7 +2,7 @@ SDIST   := dist/$(shell python setup.py --fullname).tar.gz
 SLEEP   := 0
 TIMEOUT := 3
 
-.PHONY: default clean upload
+.PHONY: default clean up upload
 
 default: $(SDIST)
 
