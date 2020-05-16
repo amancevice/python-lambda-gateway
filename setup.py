@@ -15,10 +15,10 @@ setup(
     },
     install_requires=[],
     long_description=long_description,
-    long_description_content_type="text/markdown",
+    long_description_content_type='text/markdown',
     name='lambda-gateway',
     packages=find_packages(exclude=['tests']),
-    python_requires='>=3.6',
+    python_requires='>= 3.7',
     setup_requires=['setuptools_scm'],
     tests_require=[
         'flake8',
