@@ -15,6 +15,7 @@ setup(
         'License :: OSI Approved :: MIT License',
         'Operating System :: OS Independent',
         'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
         'Topic :: Utilities',
     ],
@@ -29,7 +30,7 @@ setup(
     long_description_content_type='text/markdown',
     name='lambda-gateway',
     packages=find_packages(exclude=['tests']),
-    python_requires='>= 3.8',
+    python_requires='>= 3.7',
     setup_requires=['setuptools_scm'],
     tests_require=[
         'flake8',

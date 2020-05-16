@@ -6,6 +6,7 @@ import asyncio
 import importlib
 import json
 import os
+import socket
 import sys
 from http import server
 
@@ -132,6 +133,19 @@ class LambdaRequestHandler(server.SimpleHTTPRequestHandler):
         cls.timeout = timeout
 
 
+def get_best_family(*address):
+    try:
+        return server._get_best_family(*address)
+    except AttributeError:
+        infos = socket.getaddrinfo(
+            *address,
+            type=socket.SOCK_STREAM,
+            flags=socket.AI_PASSIVE,
+        )
+        family, type, proto, canonname, sockaddr = next(iter(infos))
+        return family, sockaddr
+
+
 def get_json_response(event, statusCode, **kwargs):
     if event['httpMethod'] in ['HEAD']:
         body = ''
@@ -216,7 +230,7 @@ def setup(bind, port, base_path, timeout, handler):
         :param int timeout: Lambda hanlder timeout in seconds
         :param str handler: Lambda handler signature
     """
-    address_family, addr = server._get_best_family(bind, port)
+    address_family, addr = get_best_family(bind, port)
     LambdaRequestHandler.set_base_path(base_path)
     LambdaRequestHandler.set_handler(handler)
     LambdaRequestHandler.set_timeout(timeout)
