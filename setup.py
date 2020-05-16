@@ -1,6 +1,9 @@
 from setuptools import setup
 from setuptools import find_packages
 
+with open('README.md', 'r') as readme:
+    long_description = readme.read()
+
 setup(
     author='amancevice',
     author_email='smallweirdnum@gmail.com',
@@ -11,8 +14,11 @@ setup(
         ],
     },
     install_requires=[],
+    long_description=long_description,
+    long_description_content_type="text/markdown",
     name='lambda-gateway',
     packages=find_packages(exclude=['tests']),
+    python_requires='>=3.6',
     setup_requires=['setuptools_scm'],
     tests_require=[
         'flake8',
