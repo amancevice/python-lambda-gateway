@@ -7,6 +7,17 @@ with open('README.md', 'r') as readme:
 setup(
     author='amancevice',
     author_email='smallweirdnum@gmail.com',
+    classifiers=[
+        "Development Status :: 4 - Beta",
+        "Environment :: Console",
+        "Framework :: AsyncIO",
+        "Intended Audience :: Developers",
+        "License :: OSI Approved :: MIT License",
+        "Operating System :: OS Independent",
+        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.8",
+        "Topic :: Utilities",
+    ],
     description='Simple HTTP server to invoke a Lambda function locally',
     entry_points={
         'console_scripts': [
