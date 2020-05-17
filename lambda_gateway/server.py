@@ -7,6 +7,7 @@ import socket
 import sys
 from http import server
 
+from lambda_gateway.event_proxy import EventProxy
 from lambda_gateway.request_handler import LambdaRequestHandler
 
 
@@ -96,7 +97,8 @@ def main():
 
     # Setup handler
     address_family, addr = get_best_family(opts.bind, opts.port)
-    LambdaRequestHandler.set_proxy(opts.HANDLER, base_path, opts.timeout)
+    proxy = EventProxy(opts.HANDLER, base_path, opts.timeout)
+    LambdaRequestHandler.set_proxy(proxy)
     server.ThreadingHTTPServer.address_family = address_family
 
     # Start server
