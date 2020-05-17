@@ -2,151 +2,33 @@
 # usage:
 #   python server.py --help
 import argparse
-import asyncio
-import importlib
-import json
 import os
+import socket
 import sys
 from http import server
 
-from lambda_gateway import lambda_context
+from lambda_gateway.event_proxy import EventProxy
+from lambda_gateway.request_handler import LambdaRequestHandler
 
 
-class LambdaRequestHandler(server.SimpleHTTPRequestHandler):
-    base_path = None
-    timeout = 30
+def get_best_family(*address):  # pragma: no cover
+    """ Helper for Python 3.7 compat.
 
-    def do_GET(self):
-        self.invoke('GET')
+        :params tuple address: host/port tuple
+    """
+    # Python 3.8+
+    try:
+        return server._get_best_family(*address)
 
-    def do_HEAD(self):
-        self.invoke('HEAD')
-
-    def do_POST(self):
-        self.invoke('POST')
-
-    def get_body(self):
-        """ Get request body to forward to Lambda handler. """
-        try:
-            content_length = int(self.headers.get('Content-Length'))
-            return self.rfile.read(content_length).decode()
-        except TypeError:
-            return ''
-
-    def get_event(self, httpMethod):
-        """ Get Lambda input event object.
-
-            :param str httpMethod: HTTP request method
-            :return dict: Lambda event object
-        """
-        return {
-            'body': self.get_body(),
-            'headers': dict(self.headers),
-            'httpMethod': httpMethod,
-            'path': self.path,
-        }
-
-    async def invoke_async(self, event, context=None):
-        """ Wrapper to invoke the Lambda handler asynchronously.
-
-            :param dict event: Lambda event object
-            :param Context context: Mock Lambda context
-            :returns dict: Lamnda invocation result
-        """
-        # Reject request if not starting at base path
-        if not self.path.startswith(self.base_path):
-            return get_json_response(event, 403, message='Forbidden')
-
-        # Get & invoke Lambda handler
-        try:
-            handler = get_handler(self.handler)
-            loop = asyncio.get_running_loop()
-            return await loop.run_in_executor(None, handler, event, context)
-        except Exception as err:
-            sys.stderr.write(f'{err}\n')
-            return get_json_response(
-                event, 502, message='Internal server error')
-
-    async def invoke_with_timeout(self, event, context=None):
-        """ Wrapper to invoke the Lambda handler with a timeout.
-
-            :param dict event: Lambda event object
-            :param Context context: Mock Lambda context
-            :returns dict: Lamnda invocation result or 408 TIMEOUT
-        """
-        try:
-            coroutine = self.invoke_async(event, context)
-            return await asyncio.wait_for(coroutine, self.timeout)
-        except asyncio.TimeoutError:
-            return get_json_response(
-                event, 504, message='Endpoint request timed out')
-
-    def invoke(self, httpMethod):
-        """ Proxy requests to Lambda handler
-
-            :param dict event: Lambda event object
-            :param Context context: Mock Lambda context
-            :returns dict: Lamnda invocation result
-        """
-        # Get Lambda event
-        event = self.get_event(httpMethod)
-
-        # Get Lambda result
-        with lambda_context.start(self.timeout) as context:
-            res = asyncio.run(self.invoke_with_timeout(event, context))
-
-        # Parse response
-        status = res.get('statusCode', 500)
-        headers = res.get('headers', {})
-        body = res.get('body', '')
-
-        # Send response
-        self.send_response(status)
-        for key, val in headers.items():
-            self.send_header(key, val)
-        self.end_headers()
-        self.wfile.write(body.encode())
-
-    @classmethod
-    def set_base_path(cls, base_path):
-        """ Set base path for REST API.
-
-            :param function handler: Lambda handler function
-        """
-        cls.base_path = base_path
-
-    @classmethod
-    def set_handler(cls, handler):
-        """ Set Lambda handler for server.
-
-            :param function handler: Lambda handler function
-        """
-        cls.handler = handler
-
-    @classmethod
-    def set_timeout(cls, timeout):
-        """ Set Lambda context timeout.
-
-            :param int timouet: Lambda context timeout in seconds
-        """
-        cls.timeout = timeout
-
-
-def get_json_response(event, statusCode, **kwargs):
-    if event['httpMethod'] in ['HEAD']:
-        body = ''
-        size = 0
-    else:
-        body = json.dumps(kwargs)
-        size = len(body)
-    return {
-        'body': body,
-        'statusCode': statusCode,
-        'headers': {
-            'Content-Type': 'application/json',
-            'Content-Length': size,
-        },
-    }
+    # Python 3.7 -- taken from http.server._get_best_family() in 3.8
+    except AttributeError:
+        infos = socket.getaddrinfo(
+            *address,
+            type=socket.SOCK_STREAM,
+            flags=socket.AI_PASSIVE,
+        )
+        family, type, proto, canonname, sockaddr = next(iter(infos))
+        return family, sockaddr
 
 
 def get_opts():
@@ -185,45 +67,6 @@ def get_opts():
     return parser.parse_args()
 
 
-def get_handler(signature):
-    """ Load handler function.
-
-        :param str signature: Lambda handler signature (eg, 'index.handler')
-        :returns function: Lambda handler function
-    """
-    *path, func = signature.split('.')
-    name = '.'.join(path)
-    if not name:
-        raise ValueError(f"Bad handler signature '{signature}'")
-    try:
-        pypath = os.path.join(os.path.curdir, f'{name}.py')
-        spec = importlib.util.spec_from_file_location(name, pypath)
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
-        return getattr(module, func)
-    except FileNotFoundError:
-        raise ValueError(f"Unable to import module '{name}'")
-    except AttributeError:
-        raise ValueError(f"Handler '{func}' missing on module '{name}'")
-
-
-def setup(bind, port, base_path, timeout, handler):
-    """ Setup server.
-
-        :param str bind: Bind address
-        :param int port: Port number
-        :param str base_path: REST API base path
-        :param int timeout: Lambda hanlder timeout in seconds
-        :param str handler: Lambda handler signature
-    """
-    address_family, addr = server._get_best_family(bind, port)
-    LambdaRequestHandler.set_base_path(base_path)
-    LambdaRequestHandler.set_handler(handler)
-    LambdaRequestHandler.set_timeout(timeout)
-    server.ThreadingHTTPServer.address_family = address_family
-    return (server.ThreadingHTTPServer, addr, LambdaRequestHandler)
-
-
 def run(httpd, base_path='/'):
     """ Run Lambda Gateway server.
 
@@ -246,14 +89,20 @@ def run(httpd, base_path='/'):
 
 def main():
     """ Main entrypoint. """
+    # Parse opts
     opts = get_opts()
+
+    # Ensure base_path is wrapped in slashes
     base_path = os.path.join('/', str(opts.base_path or ''), '')
-    bind = opts.bind
-    port = opts.port
-    timeout = opts.timeout
-    handler = opts.HANDLER
-    HTTPServer, addr, Handler = setup(bind, port, base_path, timeout, handler)
-    with HTTPServer(addr, Handler) as httpd:
+
+    # Setup handler
+    address_family, addr = get_best_family(opts.bind, opts.port)
+    proxy = EventProxy(opts.HANDLER, base_path, opts.timeout)
+    LambdaRequestHandler.set_proxy(proxy)
+    server.ThreadingHTTPServer.address_family = address_family
+
+    # Start server
+    with server.ThreadingHTTPServer(addr, LambdaRequestHandler) as httpd:
         run(httpd, base_path)
 
 
