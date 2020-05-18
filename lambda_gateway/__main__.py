@@ -45,7 +45,7 @@ def get_opts():
     parser.add_argument(
         '-b', '--bind',
         dest='bind',
-        metavar='ADDRESS',
+        metavar='ADDR',
         help='Specify alternate bind address [default: all interfaces]',
     )
     parser.add_argument(
@@ -59,6 +59,7 @@ def get_opts():
         '-t', '--timeout',
         dest='timeout',
         help='Lambda timeout.',
+        metavar='SECONDS',
         type=int,
     )
     parser.add_argument(
