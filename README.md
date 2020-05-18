@@ -15,7 +15,7 @@ This tool is was specifically implemented to use the standard Python library onl
 After installing, navigate to the directory where your Lambda function is defined and invoke it with the CLI tool using the configured handler, eg:
 
 ```bash
-lambda-gateway [-p PORT] [-t TIMEOUT] lambda_function.lambda_handler
+lambda-gateway [-p PORT] [-t SECONDS] lambda_function.lambda_handler
 # => Serving HTTP on :: port 8000 (http://[::]:8000/) ...
 ```
 
@@ -51,7 +51,7 @@ Start a local server with the signature of your Lambda handler as the argument.
 _Note — the handler must be importable from the current working directory_
 
 ```bash
-lambda-gateway [-H HOST] [-p PORT] [-b BASE_PATH] [-t TIMEOUT] lambda_function.lambda_handler
+lambda-gateway [-B PATH] [-b ADDR] [-p PORT] [-t SECONDS] lambda_function.lambda_handler
 # => Starting LambdaRequestHandler at http://localhost:8000/
 ```
 
