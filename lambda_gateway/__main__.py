@@ -40,6 +40,7 @@ def get_opts():
         '-B', '--base-path',
         dest='base_path',
         help='Set base path for REST API',
+        metavar='PATH',
     )
     parser.add_argument(
         '-b', '--bind',

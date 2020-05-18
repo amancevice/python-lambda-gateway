@@ -1,7 +1,7 @@
 import sys
 from unittest import mock
 
-from lambda_gateway import server
+from lambda_gateway import __main__
 
 
 def test_get_opts_default():
@@ -9,7 +9,7 @@ def test_get_opts_default():
         'lambda-gateway',
         'index.handler',
     ]
-    opts = server.get_opts()
+    opts = __main__.get_opts()
     assert opts.bind is None
     assert opts.port == 8000
     assert opts.timeout is None
@@ -24,7 +24,7 @@ def test_get_opts():
         '-t', '3',
         'index.handler',
     ]
-    opts = server.get_opts()
+    opts = __main__.get_opts()
     assert opts.bind == '0.0.0.0'
     assert opts.port == 8888
     assert opts.timeout == 3
@@ -34,7 +34,7 @@ def test_get_opts():
 @mock.patch('http.server.ThreadingHTTPServer')
 def test_run(mock_httpd):
     mock_httpd.socket.getsockname.return_value = ['host', 8000]
-    server.run(mock_httpd)
+    __main__.run(mock_httpd)
     mock_httpd.serve_forever.assert_called_once_with()
 
 
@@ -42,13 +42,13 @@ def test_run(mock_httpd):
 def test_run_int(mock_httpd):
     mock_httpd.socket.getsockname.return_value = ['host', 8000]
     mock_httpd.serve_forever.side_effect = KeyboardInterrupt
-    server.run(mock_httpd)
+    __main__.run(mock_httpd)
     mock_httpd.serve_forever.assert_called_once_with()
     mock_httpd.shutdown.assert_called_once_with()
 
 
 @mock.patch('http.server.ThreadingHTTPServer.__enter__')
-@mock.patch('lambda_gateway.server.run')
+@mock.patch('lambda_gateway.__main__.run')
 def test_main(mock_run, mock_httpd):
     sys.argv = [
         'lambda-gateway',
@@ -56,5 +56,5 @@ def test_main(mock_run, mock_httpd):
         'index.handler',
     ]
     mock_httpd.return_value = '<httpd>'
-    server.main()
+    __main__.main()
     mock_run.assert_called_once_with('<httpd>', '/simple/')
