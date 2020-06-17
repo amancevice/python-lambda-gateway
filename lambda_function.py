@@ -9,6 +9,8 @@ SLEEP = os.getenv('SLEEP') or '0'
 
 
 def lambda_handler(event, context=None):
+    # Log event...
+    print(json.dumps(event))
     # Do some work...
     time.sleep(float(SLEEP))
     # Return response
