@@ -13,7 +13,7 @@ upload: $(SDIST)
 	twine upload $<
 
 up:
-	SLEEP=$(SLEEP) python -m lambda_gateway.server -t $(TIMEOUT) -B simple lambda_function.lambda_handler
+	SLEEP=$(SLEEP) python -m lambda_gateway -t $(TIMEOUT) lambda_function.lambda_handler
 
 $(SDIST):
 	python setup.py sdist
