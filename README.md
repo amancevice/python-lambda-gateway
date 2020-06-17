@@ -58,8 +58,8 @@ lambda-gateway [-B PATH] [-b ADDR] [-p PORT] [-t SECONDS] lambda_function.lambda
 Test the function with cURL.
 
 ```bash
-curl http://localhost:8000/
-# => {"text": "Hello from Lambda Gateway!"}
+curl http://localhost:8000/?name=Pythonista
+# => {"text": "Hello, Pythonista! ~ Lambda Gateway"}
 ```
 
 ## Timeouts

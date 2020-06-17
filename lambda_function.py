@@ -13,9 +13,12 @@ def lambda_handler(event, context=None):
     print(json.dumps(event))
     # Do some work...
     time.sleep(float(SLEEP))
+    # Get name from qs
+    params = event.get('queryStringParameters') or {}
+    name = params.get('name') or 'Pythonista'
     # Return response
     return {
-        'body': json.dumps({'text': 'Hello from Lambda Gateway!'}),
+        'body': json.dumps({'text': f'Hello, {name}! ~ Lambda Gateway'}),
         'statusCode': 200,
         'headers': {
             'Content-Type': 'application/json',
