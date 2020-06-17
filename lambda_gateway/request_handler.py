@@ -1,3 +1,4 @@
+from urllib import parse
 from http.server import SimpleHTTPRequestHandler
 
 
@@ -25,11 +26,13 @@ class LambdaRequestHandler(SimpleHTTPRequestHandler):
             :param str httpMethod: HTTP request method
             :return dict: Lambda event object
         """
+        url = parse.urlparse(self.path)
         return {
             'body': self.get_body(),
             'headers': dict(self.headers),
             'httpMethod': httpMethod,
-            'path': self.path,
+            'path': url.path,
+            'queryStringParameters': dict(parse.parse_qsl(url.query)),
         }
 
     def invoke(self, httpMethod):

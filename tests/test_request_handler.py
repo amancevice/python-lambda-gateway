@@ -2,6 +2,7 @@ import io
 import json
 from unittest.mock import Mock
 from unittest.mock import call
+from urllib.parse import urlencode
 
 import pytest
 
@@ -14,7 +15,7 @@ class TestLambdaRequestHandler:
         self.subject = Mock(LambdaRequestHandler)
         self.subject.proxy = Mock(EventProxy)
 
-    def set_request(self, verb, path='/'):
+    def set_request(self, verb, path='/', **params):
         if verb in ['POST']:
             body = json.dumps({'data': 'POST_DATA'})
             headers = {'Content-Length': len(body)}
@@ -26,7 +27,10 @@ class TestLambdaRequestHandler:
             'headers': headers,
             'httpMethod': verb,
             'path': path,
+            'queryStringParameters': params
         }
+        if params:
+            path += f'?{urlencode(params)}'
         self.subject.headers = headers
         self.subject.path = path
         self.subject.rfile = io.BytesIO(body.encode())
@@ -58,6 +62,13 @@ class TestLambdaRequestHandler:
     @pytest.mark.parametrize('verb', ['GET', 'HEAD', 'POST'])
     def test_get_event(self, verb):
         req = self.set_request(verb)
+        self.subject.get_body.return_value = req['body']
+        ret = LambdaRequestHandler.get_event(self.subject, verb)
+        assert ret == req
+
+    @pytest.mark.parametrize('verb', ['GET', 'HEAD', 'POST'])
+    def test_get_event_with_qs(self, verb):
+        req = self.set_request(verb, '/', fizz='buzz', jazz='fuzz')
         self.subject.get_body.return_value = req['body']
         ret = LambdaRequestHandler.get_event(self.subject, verb)
         assert ret == req
