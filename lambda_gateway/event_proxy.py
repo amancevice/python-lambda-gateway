@@ -1,8 +1,8 @@
 import asyncio
-import importlib
 import json
 import os
 import sys
+from importlib.util import (spec_from_file_location, module_from_spec)
 
 from lambda_gateway import lambda_context
 
@@ -24,8 +24,8 @@ class EventProxy:
             raise ValueError(f"Bad handler signature '{self.handler}'")
         try:
             pypath = os.path.join(os.path.curdir, f'{name}.py')
-            spec = importlib.util.spec_from_file_location(name, pypath)
-            module = importlib.util.module_from_spec(spec)
+            spec = spec_from_file_location(name, pypath)
+            module = module_from_spec(spec)
             spec.loader.exec_module(module)
             return getattr(module, func)
         except FileNotFoundError:
