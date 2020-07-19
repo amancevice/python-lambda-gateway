@@ -49,6 +49,8 @@ class EventProxy:
 
         # Reject request if not starting at base path
         if not path.startswith(self.base_path):
+            err = f'Rejected {path} -- Base path is {self.base_path}'
+            sys.stderr.write(f'{err}\n')
             return self.jsonify(httpMethod, 403, message='Forbidden')
 
         # Get & invoke Lambda handler
