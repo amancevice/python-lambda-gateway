@@ -1,10 +1,9 @@
 import asyncio
 import json
 import os
-import sys
 from importlib.util import (spec_from_file_location, module_from_spec)
 
-from lambda_gateway import lambda_context
+from lambda_gateway import (lambda_context, logger)
 
 
 class EventProxy:
@@ -35,6 +34,7 @@ class EventProxy:
 
     def invoke(self, event):
         with lambda_context.start(self.timeout) as context:
+            logger.info('Invoking "%s"', self.handler)
             return asyncio.run(self.invoke_async_with_timeout(event, context))
 
     async def invoke_async(self, event, context=None):
@@ -49,8 +49,8 @@ class EventProxy:
 
         # Reject request if not starting at base path
         if not path.startswith(self.base_path):
-            err = f'Rejected {path} -- Base path is {self.base_path}'
-            sys.stderr.write(f'{err}\n')
+            err = f'Rejected {path} :: Base path is {self.base_path}'
+            logger.error(err)
             return self.jsonify(httpMethod, 403, message='Forbidden')
 
         # Get & invoke Lambda handler
@@ -59,7 +59,7 @@ class EventProxy:
             loop = asyncio.get_running_loop()
             return await loop.run_in_executor(None, handler, event, context)
         except Exception as err:
-            sys.stderr.write(f'{err}\n')
+            logger.error(err)
             message = 'Internal server error'
             return self.jsonify(httpMethod, 502, message=message)
 
