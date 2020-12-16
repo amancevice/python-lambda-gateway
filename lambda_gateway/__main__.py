@@ -14,9 +14,10 @@ from lambda_gateway import __version__
 
 
 def get_best_family(*address):  # pragma: no cover
-    """ Helper for Python 3.7 compat.
+    """
+    Helper for Python 3.7 compat.
 
-        :params tuple address: host/port tuple
+    :params tuple address: host/port tuple
     """
     # Python 3.8+
     try:
@@ -34,7 +35,9 @@ def get_best_family(*address):  # pragma: no cover
 
 
 def get_opts():
-    """ Get CLI options. """
+    """
+    Get CLI options.
+    """
     parser = argparse.ArgumentParser(
         description='Start a simple Lambda Gateway server',
     )
@@ -78,10 +81,11 @@ def get_opts():
 
 
 def run(httpd, base_path='/'):
-    """ Run Lambda Gateway server.
+    """
+    Run Lambda Gateway server.
 
-        :param object httpd: ThreadingHTTPServer instance
-        :param str base_path: REST API base path
+    :param object httpd: ThreadingHTTPServer instance
+    :param str base_path: REST API base path
     """
     host, port = httpd.socket.getsockname()[:2]
     url_host = f'[{host}]' if ':' in host else host
@@ -98,7 +102,9 @@ def run(httpd, base_path='/'):
 
 
 def main():
-    """ Main entrypoint. """
+    """
+    Main entrypoint.
+    """
     # Parse opts
     opts = get_opts()
 

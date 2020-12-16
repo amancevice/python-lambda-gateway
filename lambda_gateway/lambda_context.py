@@ -5,14 +5,17 @@ from datetime import datetime
 
 @contextmanager
 def start(timeout=None):
-    """ Yield mock Lambda context object. """
+    """
+    Yield mock Lambda context object.
+    """
     yield Context(timeout)
 
 
 class Context:
-    """ Mock Lambda context object.
+    """
+    Mock Lambda context object.
 
-        :param int timeout: Lambda timeout in seconds
+    :param int timeout: Lambda timeout in seconds
     """
     def __init__(self, timeout=None):
         self._start = datetime.utcnow()
@@ -50,6 +53,9 @@ class Context:
         return str(uuid.uuid1())
 
     def get_remaining_time_in_millis(self):
+        """
+        Get remaining TTL for Lambda context.
+        """
         delta = datetime.utcnow() - self._start
         remaining_time_in_s = self._timeout - delta.total_seconds()
         if remaining_time_in_s < 0:

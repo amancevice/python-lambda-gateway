@@ -13,9 +13,10 @@ class EventProxy:
         self.timeout = timeout
 
     def get_handler(self):
-        """ Load handler function.
+        """
+        Load handler function.
 
-            :returns function: Lambda handler function
+        :returns function: Lambda handler function
         """
         *path, func = self.handler.split('.')
         name = '.'.join(path)
@@ -38,11 +39,12 @@ class EventProxy:
             return asyncio.run(self.invoke_async_with_timeout(event, context))
 
     async def invoke_async(self, event, context=None):
-        """ Wrapper to invoke the Lambda handler asynchronously.
+        """
+        Wrapper to invoke the Lambda handler asynchronously.
 
-            :param dict event: Lambda event object
-            :param Context context: Mock Lambda context
-            :returns dict: Lamnda invocation result
+        :param dict event: Lambda event object
+        :param Context context: Mock Lambda context
+        :returns dict: Lamnda invocation result
         """
         httpMethod = event['httpMethod']
         path = event['path']
@@ -64,11 +66,12 @@ class EventProxy:
             return self.jsonify(httpMethod, 502, message=message)
 
     async def invoke_async_with_timeout(self, event, context=None):
-        """ Wrapper to invoke the Lambda handler with a timeout.
+        """
+        Wrapper to invoke the Lambda handler with a timeout.
 
-            :param dict event: Lambda event object
-            :param Context context: Mock Lambda context
-            :returns dict: Lamnda invocation result or 408 TIMEOUT
+        :param dict event: Lambda event object
+        :param Context context: Mock Lambda context
+        :returns dict: Lamnda invocation result or 408 TIMEOUT
         """
         try:
             coroutine = self.invoke_async(event, context)
@@ -80,11 +83,12 @@ class EventProxy:
 
     @staticmethod
     def jsonify(httpMethod, statusCode, **kwargs):
-        """ Convert dict into API Gateway response object.
+        """
+        Convert dict into API Gateway response object.
 
-            :params str httpMethod: HTTP request method
-            :params int statusCode: Response status code
-            :params dict kwargs: Response object
+        :params str httpMethod: HTTP request method
+        :params int statusCode: Response status code
+        :params dict kwargs: Response object
         """
         body = '' if httpMethod in ['HEAD'] else json.dumps(kwargs)
         return {

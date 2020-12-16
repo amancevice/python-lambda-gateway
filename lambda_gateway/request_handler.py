@@ -13,7 +13,9 @@ class LambdaRequestHandler(SimpleHTTPRequestHandler):
         self.invoke('POST')
 
     def get_body(self):
-        """ Get request body to forward to Lambda handler. """
+        """
+        Get request body to forward to Lambda handler.
+        """
         try:
             content_length = int(self.headers.get('Content-Length'))
             return self.rfile.read(content_length).decode()
@@ -21,10 +23,11 @@ class LambdaRequestHandler(SimpleHTTPRequestHandler):
             return ''
 
     def get_event(self, httpMethod):
-        """ Get Lambda input event object.
+        """
+        Get Lambda input event object.
 
-            :param str httpMethod: HTTP request method
-            :return dict: Lambda event object
+        :param str httpMethod: HTTP request method
+        :return dict: Lambda event object
         """
         url = parse.urlparse(self.path)
         return {
@@ -35,12 +38,37 @@ class LambdaRequestHandler(SimpleHTTPRequestHandler):
             'queryStringParameters': dict(parse.parse_qsl(url.query)),
         }
 
-    def invoke(self, httpMethod):
-        """ Proxy requests to Lambda handler
+    def get_event_v2(self, httpMethod):
+        """
+        Get Lambda input event object (v2).
 
-            :param dict event: Lambda event object
-            :param Context context: Mock Lambda context
-            :returns dict: Lamnda invocation result
+        :param str httpMethod: HTTP request method
+        :return dict: Lambda event object
+        """
+        url = parse.urlparse(self.path)
+        return {
+            'version': '2.0',
+            'body': self.get_body(),
+            'routeKey': f'{httpMethod} {url.path}',
+            'rawPath': url.path,
+            'rawQueryString': url.query,
+            'headers': dict(self.headers),
+            'queryStringParameters': dict(parse.parse_qsl(url.query)),
+            'requestContext': {
+                'http': {
+                    'method': httpMethod,
+                    'path': url.path,
+                },
+            },
+        }
+
+    def invoke(self, httpMethod):
+        """
+        Proxy requests to Lambda handler
+
+        :param dict event: Lambda event object
+        :param Context context: Mock Lambda context
+        :returns dict: Lamnda invocation result
         """
         # Get Lambda event
         event = self.get_event(httpMethod)
@@ -62,4 +90,7 @@ class LambdaRequestHandler(SimpleHTTPRequestHandler):
 
     @classmethod
     def set_proxy(cls, proxy):
+        """
+        Set up LambdaRequestHandler.
+        """
         cls.proxy = proxy
