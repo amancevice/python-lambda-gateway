@@ -29,12 +29,28 @@ class LambdaRequestHandler(SimpleHTTPRequestHandler):
         :param str httpMethod: HTTP request method
         :return dict: Lambda event object
         """
+        if self.version == '1.0':
+            return self.get_event_v1(httpMethod)
+        elif self.version == '2.0':
+            return self.get_event_v2(httpMethod)
+        raise ValueError(  # pragma: no cover
+            f'Unknown API Gateway payload version: {self.version}')
+
+    def get_event_v1(self, httpMethod):
+        """
+        Get Lambda input event object (v1).
+
+        :param str httpMethod: HTTP request method
+        :return dict: Lambda event object
+        """
         url = parse.urlparse(self.path)
+        path, *_ = url.path.split('?')
         return {
+            'version': '1.0',
             'body': self.get_body(),
             'headers': dict(self.headers),
             'httpMethod': httpMethod,
-            'path': url.path,
+            'path': path,
             'queryStringParameters': dict(parse.parse_qsl(url.query)),
         }
 
@@ -46,18 +62,19 @@ class LambdaRequestHandler(SimpleHTTPRequestHandler):
         :return dict: Lambda event object
         """
         url = parse.urlparse(self.path)
+        path, *_ = url.path.split('?')
         return {
             'version': '2.0',
             'body': self.get_body(),
-            'routeKey': f'{httpMethod} {url.path}',
-            'rawPath': url.path,
+            'routeKey': f'{httpMethod} {path}',
+            'rawPath': path,
             'rawQueryString': url.query,
             'headers': dict(self.headers),
             'queryStringParameters': dict(parse.parse_qsl(url.query)),
             'requestContext': {
                 'http': {
                     'method': httpMethod,
-                    'path': url.path,
+                    'path': path,
                 },
             },
         }
@@ -89,8 +106,9 @@ class LambdaRequestHandler(SimpleHTTPRequestHandler):
         self.wfile.write(body.encode())
 
     @classmethod
-    def set_proxy(cls, proxy):
+    def set_proxy(cls, proxy, version):
         """
         Set up LambdaRequestHandler.
         """
         cls.proxy = proxy
+        cls.version = version

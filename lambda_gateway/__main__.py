@@ -74,6 +74,12 @@ def get_opts():
         version=f'%(prog)s {__version__}',
     )
     parser.add_argument(
+        '-V', '--payload-version',
+        choices=['1.0', '2.0'],
+        default='2.0',
+        help='API Gateway payload version [default: 2.0]',
+    )
+    parser.add_argument(
         'HANDLER',
         help='Lambda handler signature',
     )
@@ -114,7 +120,7 @@ def main():
     # Setup handler
     address_family, addr = get_best_family(opts.bind, opts.port)
     proxy = EventProxy(opts.HANDLER, base_path, opts.timeout)
-    LambdaRequestHandler.set_proxy(proxy)
+    LambdaRequestHandler.set_proxy(proxy, opts.payload_version)
     server.ThreadingHTTPServer.address_family = address_family
 
     # Start server

@@ -33,6 +33,28 @@ class EventProxy:
         except AttributeError:
             raise ValueError(f"Handler '{func}' missing on module '{name}'")
 
+    def get_httpMethod(self, event):
+        """
+        Helper to get httpMethod from v1 or v2 events.
+        """
+        if event.get('version') == '2.0':
+            return event['requestContext']['http']['method']
+        elif event.get('version') == '1.0':
+            return event['httpMethod']
+        raise ValueError(  # pragma: no cover
+            f"Unknown API Gateway payload version: {event.get('version')}")
+
+    def get_path(self, event):
+        """
+        Helper to get path from v1 or v2 events.
+        """
+        if event.get('version') == '2.0':
+            return event['rawPath']
+        elif event.get('version') == '1.0':
+            return event['path']
+        raise ValueError(  # pragma: no cover
+            f"Unknown API Gateway payload version: {event.get('version')}")
+
     def invoke(self, event):
         with lambda_context.start(self.timeout) as context:
             logger.info('Invoking "%s"', self.handler)
@@ -46,8 +68,8 @@ class EventProxy:
         :param Context context: Mock Lambda context
         :returns dict: Lamnda invocation result
         """
-        httpMethod = event['httpMethod']
-        path = event['path']
+        httpMethod = self.get_httpMethod(event)
+        path = self.get_path(event)
 
         # Reject request if not starting at base path
         if not path.startswith(self.base_path):
@@ -77,7 +99,7 @@ class EventProxy:
             coroutine = self.invoke_async(event, context)
             return await asyncio.wait_for(coroutine, self.timeout)
         except asyncio.TimeoutError:
-            httpMethod = event['httpMethod']
+            httpMethod = self.get_httpMethod(event)
             message = 'Endpoint request timed out'
             return self.jsonify(httpMethod, 504, message=message)
 

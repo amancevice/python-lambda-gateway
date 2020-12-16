@@ -28,44 +28,218 @@ class TestEventProxy:
         with pytest.raises(ValueError):
             self.subject.get_handler()
 
-    @pytest.mark.parametrize(('verb', 'path', 'status', 'message'), [
-        ('GET', '/simple/', 200, 'OK'),
-        ('HEAD', '/simple/', 200, 'OK'),
-        ('POST', '/simple/', 200, 'OK'),
+    @pytest.mark.parametrize(('event', 'exp'), [
+        (
+            {
+                'version': '1.0',
+                'httpMethod': 'GET',
+                'path': '/simple/',
+            },
+            EventProxy.jsonify('GET', 200, message='OK'),
+        ),
+        (
+            {
+                'version': '1.0',
+                'httpMethod': 'HEAD',
+                'path': '/simple/',
+            },
+            EventProxy.jsonify('HEAD', 200, message='OK'),
+        ),
+        (
+            {
+                'version': '1.0',
+                'httpMethod': 'POST',
+                'path': '/simple/',
+                'body': '{"fizz": "buzz"}',
+            },
+            EventProxy.jsonify('POST', 200, message='OK'),
+        ),
+        (
+            {
+                'version': '2.0',
+                'rawPath': '/simple/',
+                'requestContext': {
+                    'http': {
+                        'method': 'GET',
+                        'path': '/simple/',
+                    },
+                },
+            },
+            EventProxy.jsonify('GET', 200, message='OK'),
+        ),
+        (
+            {
+                'version': '2.0',
+                'rawPath': '/simple/',
+                'requestContext': {
+                    'http': {
+                        'method': 'HEAD',
+                        'path': '/simple/',
+                    },
+                },
+            },
+            EventProxy.jsonify('HEAD', 200, message='OK'),
+        ),
+        (
+            {
+                'version': '2.0',
+                'rawPath': '/simple/',
+                'body': '{"fizz": "buzz"}',
+                'requestContext': {
+                    'http': {
+                        'method': 'POST',
+                        'path': '/simple/',
+                    },
+                },
+            },
+            EventProxy.jsonify('POST', 200, message='OK'),
+        ),
     ])
-    def test_invoke_success(self, verb, path, status, message):
+    def test_invoke_success(self, event, exp):
         self.subject.get_handler = lambda: lambda event, context: exp
-        exp = EventProxy.jsonify(verb, status, message=message)
-        ret = self.subject.invoke({'httpMethod': verb, 'path': path})
+        ret = self.subject.invoke(event)
         assert ret == exp
 
-    @pytest.mark.parametrize(('verb', 'path', 'status', 'message'), [
-        ('GET', '/simple/', 502, 'Internal server error'),
-        ('HEAD', '/simple/', 502, 'Internal server error'),
-        ('POST', '/simple/', 502, 'Internal server error'),
-        ('GET', '/', 403, 'Forbidden'),
-        ('HEAD', '/', 403, 'Forbidden'),
-        ('POST', '/', 403, 'Forbidden'),
+    @pytest.mark.parametrize(('event', 'exp'), [
+        (
+            {
+                'version': '2.0',
+                'rawPath': '/simple/',
+                'requestContext': {
+                    'http': {
+                        'method': 'GET',
+                        'path': '/simple/',
+                    },
+                },
+            },
+            EventProxy.jsonify('GET', 502, message='Internal server error'),
+        ),
+        (
+            {
+                'version': '2.0',
+                'rawPath': '/simple/',
+                'requestContext': {
+                    'http': {
+                        'method': 'HEAD',
+                        'path': '/simple/',
+                    },
+                },
+            },
+            EventProxy.jsonify('HEAD', 502, message='Internal server error'),
+        ),
+        (
+            {
+                'version': '2.0',
+                'rawPath': '/simple/',
+                'requestContext': {
+                    'http': {
+                        'method': 'POST',
+                        'path': '/simple/',
+                    },
+                },
+            },
+            EventProxy.jsonify('POST', 502, message='Internal server error'),
+        ),
+        (
+            {
+                'version': '2.0',
+                'rawPath': '/',
+                'requestContext': {
+                    'http': {
+                        'method': 'GET',
+                        'path': '/',
+                    },
+                },
+            },
+            EventProxy.jsonify('GET', 403, message='Forbidden'),
+        ),
+        (
+            {
+                'version': '2.0',
+                'rawPath': '/',
+                'requestContext': {
+                    'http': {
+                        'method': 'HEAD',
+                        'path': '/',
+                    },
+                },
+            },
+            EventProxy.jsonify('HEAD', 403, message='Forbidden'),
+        ),
+        (
+            {
+                'version': '2.0',
+                'rawPath': '/',
+                'requestContext': {
+                    'http': {
+                        'method': 'POST',
+                        'path': '/',
+                    },
+                },
+            },
+            EventProxy.jsonify('POST', 403, message='Forbidden'),
+        ),
     ])
-    def test_invoke_error(self, verb, path, status, message):
+    def test_invoke_error(self, event, exp):
         def handler(event, context):
             raise Exception()
         self.subject.get_handler = lambda: handler
-        exp = EventProxy.jsonify(verb, status, message=message)
-        ret = self.subject.invoke({'httpMethod': verb, 'path': path})
+        ret = self.subject.invoke(event)
         assert ret == exp
 
-    @pytest.mark.parametrize(('verb', 'path', 'status', 'message'), [
-        ('GET', '/simple/', 504, 'Endpoint request timed out'),
-        ('HEAD', '/simple/', 504, 'Endpoint request timed out'),
-        ('POST', '/simple/', 504, 'Endpoint request timed out'),
+    @pytest.mark.parametrize(('event', 'exp'), [
+        (
+            {
+                'version': '2.0',
+                'rawPath': '/simple/',
+                'requestContext': {
+                    'http': {
+                        'method': 'GET',
+                        'path': '/simple/',
+                    },
+                },
+            },
+            EventProxy.jsonify(
+                'GET', 504,
+                message='Endpoint request timed out',
+            ),
+        ),
+        (
+            {
+                'version': '2.0',
+                'rawPath': '/simple/',
+                'requestContext': {
+                    'http': {
+                        'method': 'HEAD',
+                        'path': '/simple/',
+                    },
+                },
+            },
+            EventProxy.jsonify('HEAD', 504),
+        ),
+        (
+            {
+                'version': '2.0',
+                'rawPath': '/simple/',
+                'body': '{"fizz": "buzz"}',
+                'requestContext': {
+                    'http': {
+                        'method': 'POST',
+                        'path': '/simple/',
+                    },
+                },
+            },
+            EventProxy.jsonify(
+                'POST', 504,
+                message='Endpoint request timed out',
+            ),
+        ),
     ])
-    def test_invoke_timeout(self, verb, path, status, message):
+    def test_invoke_timeout(self, event, exp):
         patch = 'lambda_gateway.event_proxy.EventProxy.invoke_async'
         with mock.patch(patch) as mock_invoke:
             mock_invoke.side_effect = asyncio.TimeoutError
-            exp = EventProxy.jsonify(verb, status, message=message)
-            ret = self.subject.invoke({'httpMethod': verb, 'path': path})
+            ret = self.subject.invoke(event)
             assert ret == exp
 
     @pytest.mark.parametrize(('verb', 'statusCode', 'body', 'exp'), [
