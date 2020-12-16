@@ -1,4 +1,10 @@
 import logging
+import pkg_resources
+
+try:
+    __version__ = pkg_resources.get_distribution(__package__).version
+except pkg_resources.DistributionNotFound:  # pragma: no cover
+    __version__ = None
 
 
 def set_stream_logger(name, level=logging.DEBUG, format_string=None):

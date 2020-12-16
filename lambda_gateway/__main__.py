@@ -10,6 +10,8 @@ from http import server
 from lambda_gateway.event_proxy import EventProxy
 from lambda_gateway.request_handler import LambdaRequestHandler
 
+from lambda_gateway import __version__
+
 
 def get_best_family(*address):  # pragma: no cover
     """ Helper for Python 3.7 compat.
@@ -61,6 +63,12 @@ def get_opts():
         help='Lambda timeout.',
         metavar='SECONDS',
         type=int,
+    )
+    parser.add_argument(
+        '-v', '--version',
+        action='version',
+        help='Print version and exit',
+        version=f'%(prog)s {__version__}',
     )
     parser.add_argument(
         'HANDLER',
