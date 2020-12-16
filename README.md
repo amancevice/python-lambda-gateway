@@ -71,3 +71,13 @@ The timeout length can be adjusted using the `-t / --timeout` CLI option.
 ```bash
 lambda-gateway -t 3 lambda_function.lambda_handler
 ```
+
+## API Gateway Payloads
+
+API Gateway supports [two versions](https://docs.aws.amazon.com/apigateway/latest/developerguide/http-api-develop-integrations-lambda.html) of proxied JSON payloads to Lambda integrations, `1.0` and `2.0`.
+
+Versions `0.8+` of Lambda Gateway use `2.0` by default, but this can be changed at startup time using the `-V / --payload-version` option:
+
+```bash
+lambda-gateway -V1.0 lambda_function.lambda_handler
+```
