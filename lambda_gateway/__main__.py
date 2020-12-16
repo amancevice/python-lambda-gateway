@@ -10,11 +10,14 @@ from http import server
 from lambda_gateway.event_proxy import EventProxy
 from lambda_gateway.request_handler import LambdaRequestHandler
 
+from lambda_gateway import __version__
+
 
 def get_best_family(*address):  # pragma: no cover
-    """ Helper for Python 3.7 compat.
+    """
+    Helper for Python 3.7 compat.
 
-        :params tuple address: host/port tuple
+    :params tuple address: host/port tuple
     """
     # Python 3.8+
     try:
@@ -32,7 +35,9 @@ def get_best_family(*address):  # pragma: no cover
 
 
 def get_opts():
-    """ Get CLI options. """
+    """
+    Get CLI options.
+    """
     parser = argparse.ArgumentParser(
         description='Start a simple Lambda Gateway server',
     )
@@ -63,6 +68,18 @@ def get_opts():
         type=int,
     )
     parser.add_argument(
+        '-v', '--version',
+        action='version',
+        help='Print version and exit',
+        version=f'%(prog)s {__version__}',
+    )
+    parser.add_argument(
+        '-V', '--payload-version',
+        choices=['1.0', '2.0'],
+        default='2.0',
+        help='API Gateway payload version [default: 2.0]',
+    )
+    parser.add_argument(
         'HANDLER',
         help='Lambda handler signature',
     )
@@ -70,10 +87,11 @@ def get_opts():
 
 
 def run(httpd, base_path='/'):
-    """ Run Lambda Gateway server.
+    """
+    Run Lambda Gateway server.
 
-        :param object httpd: ThreadingHTTPServer instance
-        :param str base_path: REST API base path
+    :param object httpd: ThreadingHTTPServer instance
+    :param str base_path: REST API base path
     """
     host, port = httpd.socket.getsockname()[:2]
     url_host = f'[{host}]' if ':' in host else host
@@ -90,7 +108,9 @@ def run(httpd, base_path='/'):
 
 
 def main():
-    """ Main entrypoint. """
+    """
+    Main entrypoint.
+    """
     # Parse opts
     opts = get_opts()
 
@@ -100,7 +120,7 @@ def main():
     # Setup handler
     address_family, addr = get_best_family(opts.bind, opts.port)
     proxy = EventProxy(opts.HANDLER, base_path, opts.timeout)
-    LambdaRequestHandler.set_proxy(proxy)
+    LambdaRequestHandler.set_proxy(proxy, opts.payload_version)
     server.ThreadingHTTPServer.address_family = address_family
 
     # Start server

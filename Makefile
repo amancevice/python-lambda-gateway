@@ -9,8 +9,7 @@ default: $(SDIST)
 clean:
 	rm -rf dist
 
-test:
-	py.test
+test: coverage.xml
 
 upload: $(SDIST)
 	twine upload $<
@@ -18,5 +17,9 @@ upload: $(SDIST)
 up:
 	SLEEP=$(SLEEP) python -m lambda_gateway -t $(TIMEOUT) lambda_function.lambda_handler
 
-$(SDIST): test
+coverage.xml: $(shell find . -name '*.py' -not -path './.*')
+	flake8 $^
+	pytest
+
+$(SDIST): coverage.xml
 	python setup.py sdist

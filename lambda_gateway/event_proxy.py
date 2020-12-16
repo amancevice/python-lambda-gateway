@@ -13,9 +13,10 @@ class EventProxy:
         self.timeout = timeout
 
     def get_handler(self):
-        """ Load handler function.
+        """
+        Load handler function.
 
-            :returns function: Lambda handler function
+        :returns function: Lambda handler function
         """
         *path, func = self.handler.split('.')
         name = '.'.join(path)
@@ -32,20 +33,43 @@ class EventProxy:
         except AttributeError:
             raise ValueError(f"Handler '{func}' missing on module '{name}'")
 
+    def get_httpMethod(self, event):
+        """
+        Helper to get httpMethod from v1 or v2 events.
+        """
+        if event.get('version') == '2.0':
+            return event['requestContext']['http']['method']
+        elif event.get('version') == '1.0':
+            return event['httpMethod']
+        raise ValueError(  # pragma: no cover
+            f"Unknown API Gateway payload version: {event.get('version')}")
+
+    def get_path(self, event):
+        """
+        Helper to get path from v1 or v2 events.
+        """
+        if event.get('version') == '2.0':
+            return event['rawPath']
+        elif event.get('version') == '1.0':
+            return event['path']
+        raise ValueError(  # pragma: no cover
+            f"Unknown API Gateway payload version: {event.get('version')}")
+
     def invoke(self, event):
         with lambda_context.start(self.timeout) as context:
             logger.info('Invoking "%s"', self.handler)
             return asyncio.run(self.invoke_async_with_timeout(event, context))
 
     async def invoke_async(self, event, context=None):
-        """ Wrapper to invoke the Lambda handler asynchronously.
-
-            :param dict event: Lambda event object
-            :param Context context: Mock Lambda context
-            :returns dict: Lamnda invocation result
         """
-        httpMethod = event['httpMethod']
-        path = event['path']
+        Wrapper to invoke the Lambda handler asynchronously.
+
+        :param dict event: Lambda event object
+        :param Context context: Mock Lambda context
+        :returns dict: Lamnda invocation result
+        """
+        httpMethod = self.get_httpMethod(event)
+        path = self.get_path(event)
 
         # Reject request if not starting at base path
         if not path.startswith(self.base_path):
@@ -64,27 +88,29 @@ class EventProxy:
             return self.jsonify(httpMethod, 502, message=message)
 
     async def invoke_async_with_timeout(self, event, context=None):
-        """ Wrapper to invoke the Lambda handler with a timeout.
+        """
+        Wrapper to invoke the Lambda handler with a timeout.
 
-            :param dict event: Lambda event object
-            :param Context context: Mock Lambda context
-            :returns dict: Lamnda invocation result or 408 TIMEOUT
+        :param dict event: Lambda event object
+        :param Context context: Mock Lambda context
+        :returns dict: Lamnda invocation result or 408 TIMEOUT
         """
         try:
             coroutine = self.invoke_async(event, context)
             return await asyncio.wait_for(coroutine, self.timeout)
         except asyncio.TimeoutError:
-            httpMethod = event['httpMethod']
+            httpMethod = self.get_httpMethod(event)
             message = 'Endpoint request timed out'
             return self.jsonify(httpMethod, 504, message=message)
 
     @staticmethod
     def jsonify(httpMethod, statusCode, **kwargs):
-        """ Convert dict into API Gateway response object.
+        """
+        Convert dict into API Gateway response object.
 
-            :params str httpMethod: HTTP request method
-            :params int statusCode: Response status code
-            :params dict kwargs: Response object
+        :params str httpMethod: HTTP request method
+        :params int statusCode: Response status code
+        :params dict kwargs: Response object
         """
         body = '' if httpMethod in ['HEAD'] else json.dumps(kwargs)
         return {

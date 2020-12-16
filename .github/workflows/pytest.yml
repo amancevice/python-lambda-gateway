@@ -3,7 +3,7 @@ on:
   pull_request:
   push:
   schedule:
-    - cron: "11 21 * * *"
+    - cron: '11 21 * * *'
 jobs:
   pytest:
     runs-on: ubuntu-latest
@@ -12,6 +12,7 @@ jobs:
         python:
           - 3.7
           - 3.8
+          - 3.9
     steps:
       - uses: actions/checkout@v1
       - uses: actions/setup-python@v1

@@ -1,5 +1,4 @@
-from setuptools import find_packages
-from setuptools import setup
+from setuptools import (find_packages, setup)
 
 with open('README.md', 'r') as readme:
     long_description = readme.read()
@@ -17,6 +16,7 @@ setup(
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
+        'Programming Language :: Python :: 3.9',
         'Topic :: Utilities',
     ],
     description='Simple HTTP server to invoke a Lambda function locally',
