@@ -1,0 +1,12 @@
+version: '3.9'
+services:
+  lambda_gateway:
+    command: lambda_function.lambda_handler
+    image: amancevice/lambda-gateway-python:${PYTHON_VERSION:-3.8}
+    network_mode: bridge
+    environment:
+      SLEEP: ${SLEEP:-0}
+    ports:
+      - 8000
+    volumes:
+      - ./:/var/task
