@@ -2,9 +2,9 @@ SDIST   := dist/$(shell python setup.py --fullname).tar.gz
 SLEEP   := 0
 TIMEOUT := 3
 
-.PHONY: default clean test up upload
+.PHONY: all clean test up upload
 
-default: $(SDIST)
+all: $(SDIST)
 
 clean:
 	rm -rf dist
@@ -17,7 +17,7 @@ upload: $(SDIST)
 up:
 	SLEEP=$(SLEEP) python -m lambda_gateway -t $(TIMEOUT) lambda_function.lambda_handler
 
-coverage.xml: $(shell find . -name '*.py' -not -path './.*')
+coverage.xml: $(shell find lambda_gateway tests -name '*.py')
 	flake8 $^
 	pytest
 
