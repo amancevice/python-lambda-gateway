@@ -4,6 +4,7 @@ ENV PYTHONPATH=/opt/python:/var/task
 EXPOSE 8000
 VOLUME /var/task
 VOLUME /opt/python
-COPY dist .
-RUN pip install *.tar.gz && rm *.tar.gz
+ARG TARBALL=lambda-gateway-latest.tar.gz
+COPY ${TARBALL} ${TARBALL}
+RUN pip install ${TARBALL} && rm ${TARBALL}
 ENTRYPOINT [ "python", "-m", "lambda_gateway" ]
