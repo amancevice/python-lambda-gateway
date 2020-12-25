@@ -39,6 +39,7 @@ def get_opts():
     Get CLI options.
     """
     parser = argparse.ArgumentParser(
+        prog='lambda-gateway',
         description='Start a simple Lambda Gateway server',
     )
     parser.add_argument(
