@@ -63,10 +63,11 @@ class LambdaRequestHandler(SimpleHTTPRequestHandler):
         """
         url = parse.urlparse(self.path)
         path, *_ = url.path.split('?')
+        route_key = self.headers.get('x-route-key') or f'{httpMethod} {path}'
         return {
             'version': '2.0',
             'body': self.get_body(),
-            'routeKey': f'{httpMethod} {path}',
+            'routeKey': route_key,
             'rawPath': path,
             'rawQueryString': url.query,
             'headers': dict(self.headers),
