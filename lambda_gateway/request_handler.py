@@ -94,9 +94,9 @@ class LambdaRequestHandler(SimpleHTTPRequestHandler):
         res = self.proxy.invoke(event)
 
         # Parse response
-        status = res.get('statusCode', 500)
-        headers = res.get('headers', {})
-        body = res.get('body', '')
+        status = res.get('statusCode') or 500
+        headers = res.get('headers') or {}
+        body = res.get('body') or ''
 
         # Send response
         self.send_response(status)
