@@ -10,6 +10,7 @@ ipdb = "*"
 ipython = "*"
 pytest = "*"
 pytest-cov = "*"
+pytest-flake8 = "*"
 twine = "*"
 
 [packages]

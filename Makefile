@@ -8,7 +8,7 @@ TIMEOUT := 3
 all: dist/lambda-gateway-latest.tar.gz
 
 clean:
-	rm -rf dist *.iid coverage.xml
+	rm -rf dist *.iid .pytest_cache coverage.xml
 
 images: Dockerfile.3.7.iid Dockerfile.3.8.iid
 
@@ -38,5 +38,4 @@ dist/lambda-gateway-%.tar.gz: coverage.xml
 	SETUPTOOLS_SCM_PRETEND_VERSION=$* python setup.py sdist
 
 coverage.xml: $(shell find lambda_gateway tests -name '*.py')
-	flake8 $^
 	pytest
