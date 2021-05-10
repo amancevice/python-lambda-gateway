@@ -11,6 +11,30 @@ class LambdaRequestHandler(SimpleHTTPRequestHandler):
 
     def do_POST(self):
         self.invoke('POST')
+        
+    def do_OPTIONS(self):
+        """
+        OPTIONS requests to Lambda handler
+
+        :param dict event: Lambda event object
+        :param Context context: Mock Lambda context
+        :returns dict: Lamnda invocation result
+        """
+
+        # Parse response
+        status = 200
+        headers = {
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Headers": "*",
+        }
+        body = ''
+
+        # Send response
+        self.send_response(status)
+        for key, val in headers.items():
+            self.send_header(key, val)
+        self.end_headers()
+        self.wfile.write(body.encode())
 
     def get_body(self):
         """
