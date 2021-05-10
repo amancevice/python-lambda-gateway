@@ -3,7 +3,7 @@ on:
   pull_request:
   push:
   schedule:
-    - cron: '11 21 * * *'
+    - cron: "11 21 * * *"
 jobs:
   pytest:
     runs-on: ubuntu-latest
@@ -14,16 +14,15 @@ jobs:
           - 3.8
           - 3.9
     steps:
-      - uses: actions/checkout@v1
-      - uses: actions/setup-python@v1
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python }}
       - uses: amancevice/setup-code-climate@v0
         with:
           cc_test_reporter_id: ${{ secrets.CC_TEST_REPORTER_ID }}
       - run: cc-test-reporter before-build
-      - run: pip install . flake8 pytest pytest-cov
-      - run: flake8
+      - run: pip install . flake8 pytest pytest-cov pytest-flake8
       - run: pytest
       - run: cc-test-reporter after-build
         if: ${{ github.event_name != 'pull_request' }}
