@@ -74,7 +74,8 @@ class TestLambdaRequestHandler:
         assert LambdaRequestHandler.proxy == proxy
         assert LambdaRequestHandler.version == version
 
-    @pytest.mark.parametrize('verb', ['GET', 'HEAD', 'POST'])
+    @pytest.mark.parametrize('verb', [
+        'DELETE', 'GET', 'HEAD', 'OPTIONS', 'PATCH', 'POST', 'PUT'])
     def test_do(self, verb):
         getattr(LambdaRequestHandler, f'do_{verb}')(self.subject)
         self.subject.invoke.assert_called_once_with(verb)

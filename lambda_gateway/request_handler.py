@@ -3,14 +3,26 @@ from http.server import SimpleHTTPRequestHandler
 
 
 class LambdaRequestHandler(SimpleHTTPRequestHandler):
+    def do_DELETE(self):
+        self.invoke('DELETE')
+
     def do_GET(self):
         self.invoke('GET')
 
     def do_HEAD(self):
         self.invoke('HEAD')
 
+    def do_OPTIONS(self):
+        self.invoke('OPTIONS')
+
+    def do_PATCH(self):
+        self.invoke('PATCH')
+
     def do_POST(self):
         self.invoke('POST')
+
+    def do_PUT(self):
+        self.invoke('PUT')
 
     def get_body(self):
         """
