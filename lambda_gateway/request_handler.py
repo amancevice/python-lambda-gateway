@@ -16,12 +16,9 @@ class LambdaRequestHandler(SimpleHTTPRequestHandler):
         """
         OPTIONS requests to Lambda handler
 
-        :param dict event: Lambda event object
-        :param Context context: Mock Lambda context
         :returns dict: Lamnda invocation result
         """
 
-        # Parse response
         status = 200
         headers = {
             "Access-Control-Allow-Origin": "*",
