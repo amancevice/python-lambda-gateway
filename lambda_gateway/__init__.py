@@ -1,10 +1,5 @@
 import logging
-import pkg_resources
-
-try:
-    __version__ = pkg_resources.get_distribution(__package__).version
-except pkg_resources.DistributionNotFound:  # pragma: no cover
-    __version__ = None
+from pkg_resources import (get_distribution, DistributionNotFound)
 
 
 def set_stream_logger(name, level=logging.DEBUG, format_string=None):
@@ -25,5 +20,17 @@ def set_stream_logger(name, level=logging.DEBUG, format_string=None):
     logger.addHandler(handler)
     return adapter
 
+
+def _version():
+    """
+    Helper to get package version.
+    """
+    try:
+        return get_distribution(__name__).version
+    except DistributionNotFound:  # pragma: no cover
+        return None
+
+
+__version__ = _version()
 
 logger = set_stream_logger(__name__)
