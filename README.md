@@ -36,9 +36,13 @@ Create a Lambda function handler in Python 3
 import json
 
 
-def lambda_handler(event, context):
+def lambda_handler(event, context=None):
+    # Get name from qs
+    params = event.get('queryStringParameters') or {}
+    name = params.get('name') or 'Pythonista'
+    # Return response
     return {
-        'body': json.dumps({'text': 'Hello from Lambda Gateway!'}),
+        'body': json.dumps({'text': f'Hello, {name}! ~ Lambda Gateway'}),
         'statusCode': 200,
         'headers': {
             'Content-Type': 'application/json',
