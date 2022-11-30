@@ -131,3 +131,4 @@ dmypy.json
 *.iid
 
 Brewfile.lock.json
+Pipfile.lock
