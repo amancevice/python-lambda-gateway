@@ -4,35 +4,35 @@ from http.server import SimpleHTTPRequestHandler
 
 class LambdaRequestHandler(SimpleHTTPRequestHandler):
     def do_DELETE(self):
-        self.invoke('DELETE')
+        self.invoke("DELETE")
 
     def do_GET(self):
-        self.invoke('GET')
+        self.invoke("GET")
 
     def do_HEAD(self):
-        self.invoke('HEAD')
+        self.invoke("HEAD")
 
     def do_OPTIONS(self):
-        self.invoke('OPTIONS')
+        self.invoke("OPTIONS")
 
     def do_PATCH(self):
-        self.invoke('PATCH')
+        self.invoke("PATCH")
 
     def do_POST(self):
-        self.invoke('POST')
+        self.invoke("POST")
 
     def do_PUT(self):
-        self.invoke('PUT')
+        self.invoke("PUT")
 
     def get_body(self):
         """
         Get request body to forward to Lambda handler.
         """
         try:
-            content_length = int(self.headers.get('Content-Length'))
+            content_length = int(self.headers.get("Content-Length"))
             return self.rfile.read(content_length).decode()
         except TypeError:
-            return ''
+            return ""
 
     def get_event(self, httpMethod):
         """
@@ -41,12 +41,13 @@ class LambdaRequestHandler(SimpleHTTPRequestHandler):
         :param str httpMethod: HTTP request method
         :return dict: Lambda event object
         """
-        if self.version == '1.0':
+        if self.version == "1.0":
             return self.get_event_v1(httpMethod)
-        elif self.version == '2.0':
+        elif self.version == "2.0":
             return self.get_event_v2(httpMethod)
         raise ValueError(  # pragma: no cover
-            f'Unknown API Gateway payload version: {self.version}')
+            f"Unknown API Gateway payload version: {self.version}"
+        )
 
     def get_event_v1(self, httpMethod):
         """
@@ -56,14 +57,14 @@ class LambdaRequestHandler(SimpleHTTPRequestHandler):
         :return dict: Lambda event object
         """
         url = parse.urlparse(self.path)
-        path, *_ = url.path.split('?')
+        path, *_ = url.path.split("?")
         return {
-            'version': '1.0',
-            'body': self.get_body(),
-            'headers': dict(self.headers),
-            'httpMethod': httpMethod,
-            'path': path,
-            'queryStringParameters': dict(parse.parse_qsl(url.query)),
+            "version": "1.0",
+            "body": self.get_body(),
+            "headers": dict(self.headers),
+            "httpMethod": httpMethod,
+            "path": path,
+            "queryStringParameters": dict(parse.parse_qsl(url.query)),
         }
 
     def get_event_v2(self, httpMethod):
@@ -74,20 +75,20 @@ class LambdaRequestHandler(SimpleHTTPRequestHandler):
         :return dict: Lambda event object
         """
         url = parse.urlparse(self.path)
-        path, *_ = url.path.split('?')
-        route_key = self.headers.get('x-route-key') or f'{httpMethod} {path}'
+        path, *_ = url.path.split("?")
+        route_key = self.headers.get("x-route-key") or f"{httpMethod} {path}"
         return {
-            'version': '2.0',
-            'body': self.get_body(),
-            'routeKey': route_key,
-            'rawPath': path,
-            'rawQueryString': url.query,
-            'headers': dict(self.headers),
-            'queryStringParameters': dict(parse.parse_qsl(url.query)),
-            'requestContext': {
-                'http': {
-                    'method': httpMethod,
-                    'path': path,
+            "version": "2.0",
+            "body": self.get_body(),
+            "routeKey": route_key,
+            "rawPath": path,
+            "rawQueryString": url.query,
+            "headers": dict(self.headers),
+            "queryStringParameters": dict(parse.parse_qsl(url.query)),
+            "requestContext": {
+                "http": {
+                    "method": httpMethod,
+                    "path": path,
                 },
             },
         }
@@ -107,9 +108,9 @@ class LambdaRequestHandler(SimpleHTTPRequestHandler):
         res = self.proxy.invoke(event)
 
         # Parse response
-        status = res.get('statusCode') or 500
-        headers = res.get('headers') or {}
-        body = res.get('body') or ''
+        status = res.get("statusCode") or 500
+        headers = res.get("headers") or {}
+        body = res.get("body") or ""
 
         # Send response
         self.send_response(status)

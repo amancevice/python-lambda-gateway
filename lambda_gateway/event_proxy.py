@@ -4,7 +4,7 @@ import json
 import os
 import sys
 
-from lambda_gateway import (lambda_context, logger)
+from lambda_gateway import lambda_context, logger
 
 
 class EventProxy:
@@ -19,8 +19,8 @@ class EventProxy:
 
         :returns function: Lambda handler function
         """
-        *path, func = self.handler.split('.')
-        name = '.'.join(path)
+        *path, func = self.handler.split(".")
+        name = ".".join(path)
         if not name:
             raise ValueError(f"Bad handler signature '{self.handler}'")
         try:
@@ -37,23 +37,25 @@ class EventProxy:
         """
         Helper to get httpMethod from v1 or v2 events.
         """
-        if event.get('version') == '2.0':
-            return event['requestContext']['http']['method']
-        elif event.get('version') == '1.0':
-            return event['httpMethod']
+        if event.get("version") == "2.0":
+            return event["requestContext"]["http"]["method"]
+        elif event.get("version") == "1.0":
+            return event["httpMethod"]
         raise ValueError(  # pragma: no cover
-            f"Unknown API Gateway payload version: {event.get('version')}")
+            f"Unknown API Gateway payload version: {event.get('version')}"
+        )
 
     def get_path(self, event):
         """
         Helper to get path from v1 or v2 events.
         """
-        if event.get('version') == '2.0':
-            return event['rawPath']
-        elif event.get('version') == '1.0':
-            return event['path']
+        if event.get("version") == "2.0":
+            return event["rawPath"]
+        elif event.get("version") == "1.0":
+            return event["path"]
         raise ValueError(  # pragma: no cover
-            f"Unknown API Gateway payload version: {event.get('version')}")
+            f"Unknown API Gateway payload version: {event.get('version')}"
+        )
 
     def invoke(self, event):
         with lambda_context.start(self.timeout) as context:
@@ -73,9 +75,9 @@ class EventProxy:
 
         # Reject request if not starting at base path
         if not path.startswith(self.base_path):
-            err = f'Rejected {path} :: Base path is {self.base_path}'
+            err = f"Rejected {path} :: Base path is {self.base_path}"
             logger.error(err)
-            return self.jsonify(httpMethod, 403, message='Forbidden')
+            return self.jsonify(httpMethod, 403, message="Forbidden")
 
         # Get & invoke Lambda handler
         try:
@@ -84,7 +86,7 @@ class EventProxy:
             return await loop.run_in_executor(None, handler, event, context)
         except Exception as err:
             logger.error(err)
-            message = 'Internal server error'
+            message = "Internal server error"
             return self.jsonify(httpMethod, 502, message=message)
 
     async def invoke_async_with_timeout(self, event, context=None):
@@ -100,7 +102,7 @@ class EventProxy:
             return await asyncio.wait_for(coroutine, self.timeout)
         except asyncio.TimeoutError:
             httpMethod = self.get_httpMethod(event)
-            message = 'Endpoint request timed out'
+            message = "Endpoint request timed out"
             return self.jsonify(httpMethod, 504, message=message)
 
     @staticmethod
@@ -112,12 +114,12 @@ class EventProxy:
         :params int statusCode: Response status code
         :params dict kwargs: Response object
         """
-        body = '' if httpMethod in ['HEAD'] else json.dumps(kwargs)
+        body = "" if httpMethod in ["HEAD"] else json.dumps(kwargs)
         return {
-            'body': body,
-            'statusCode': statusCode,
-            'headers': {
-                'Content-Type': 'application/json',
-                'Content-Length': len(body),
+            "body": body,
+            "statusCode": statusCode,
+            "headers": {
+                "Content-Type": "application/json",
+                "Content-Length": len(body),
             },
         }

@@ -39,55 +39,61 @@ def get_opts():
     Get CLI options.
     """
     parser = argparse.ArgumentParser(
-        prog='lambda-gateway',
-        description='Start a simple Lambda Gateway server',
+        prog="lambda-gateway",
+        description="Start a simple Lambda Gateway server",
     )
     parser.add_argument(
-        '-B', '--base-path',
-        dest='base_path',
-        help='Set base path for REST API',
-        metavar='PATH',
+        "-B",
+        "--base-path",
+        dest="base_path",
+        help="Set base path for REST API",
+        metavar="PATH",
     )
     parser.add_argument(
-        '-b', '--bind',
-        dest='bind',
-        metavar='ADDR',
-        help='Specify alternate bind address [default: all interfaces]',
+        "-b",
+        "--bind",
+        dest="bind",
+        metavar="ADDR",
+        help="Specify alternate bind address [default: all interfaces]",
     )
     parser.add_argument(
-        '-p', '--port',
-        dest='port',
+        "-p",
+        "--port",
+        dest="port",
         default=8000,
-        help='Specify alternate port [default: 8000]',
+        help="Specify alternate port [default: 8000]",
         type=int,
     )
     parser.add_argument(
-        '-t', '--timeout',
-        dest='timeout',
-        help='Lambda timeout.',
-        metavar='SECONDS',
+        "-t",
+        "--timeout",
+        dest="timeout",
+        help="Lambda timeout.",
+        metavar="SECONDS",
         type=int,
     )
     parser.add_argument(
-        '-v', '--version',
-        action='version',
-        help='Print version and exit',
-        version=f'%(prog)s {__version__}',
+        "-v",
+        "--version",
+        action="version",
+        help="Print version and exit",
+        version=f"%(prog)s {__version__}",
     )
     parser.add_argument(
-        '-V', '--payload-version',
-        choices=['1.0', '2.0'],
-        default='2.0',
-        help='API Gateway payload version [default: 2.0]',
+        "-V",
+        "--payload-version",
+        choices=["1.0", "2.0"],
+        default="2.0",
+        help="API Gateway payload version [default: 2.0]",
     )
     parser.add_argument(
-        'HANDLER',
-        help='Lambda handler signature',
+        "HANDLER",
+        help="Lambda handler signature",
     )
     return parser.parse_args()
 
 
-def run(httpd, base_path='/'):
+def run(httpd, base_path="/"):
     """
     Run Lambda Gateway server.
 
@@ -95,15 +101,15 @@ def run(httpd, base_path='/'):
     :param str base_path: REST API base path
     """
     host, port = httpd.socket.getsockname()[:2]
-    url_host = f'[{host}]' if ':' in host else host
+    url_host = f"[{host}]" if ":" in host else host
     sys.stderr.write(
-        f'Serving HTTP on {host} port {port} '
-        f'(http://{url_host}:{port}{base_path}) ...\n'
+        f"Serving HTTP on {host} port {port} "
+        f"(http://{url_host}:{port}{base_path}) ...\n"
     )
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:
-        sys.stderr.write('\nKeyboard interrupt received, exiting.\n')
+        sys.stderr.write("\nKeyboard interrupt received, exiting.\n")
     finally:
         httpd.shutdown()
 
@@ -116,7 +122,7 @@ def main():
     opts = get_opts()
 
     # Ensure base_path is wrapped in slashes
-    base_path = os.path.join('/', str(opts.base_path or ''), '')
+    base_path = os.path.join("/", str(opts.base_path or ""), "")
 
     # Setup handler
     address_family, addr = get_best_family(opts.bind, opts.port)
@@ -129,5 +135,5 @@ def main():
         run(httpd, base_path)
 
 
-if __name__ == '__main__':  # pragma: no cover
+if __name__ == "__main__":  # pragma: no cover
     main()

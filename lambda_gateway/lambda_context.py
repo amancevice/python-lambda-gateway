@@ -17,24 +17,25 @@ class Context:
 
     :param int timeout: Lambda timeout in seconds
     """
+
     def __init__(self, timeout=None):
         self._start = datetime.utcnow()
         self._timeout = timeout or 30
 
     @property
     def function_name(self):
-        return 'lambda-gateway'
+        return "lambda-gateway"
 
     @property
     def function_version(self):
-        return '$LATEST'
+        return "$LATEST"
 
     @property
     def invoked_function_arn(self):
-        account_id = '123456789012'
-        region = 'us-east-1'
+        account_id = "123456789012"
+        region = "us-east-1"
         function_name = self.function_name
-        return f'arn:aws:lambda:{region}:{account_id}:function:{function_name}'
+        return f"arn:aws:lambda:{region}:{account_id}:function:{function_name}"
 
     @property
     def memory_limit_in_mb(self):
@@ -46,7 +47,7 @@ class Context:
 
     @property
     def log_group_name(self):
-        return '/aws/lambda/lambda-gateway'
+        return "/aws/lambda/lambda-gateway"
 
     @property
     def log_stream_name(self):

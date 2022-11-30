@@ -15,14 +15,16 @@ class TestContext:
         self.subject = Context(1)
 
     def test_function_name(self):
-        assert self.subject.function_name == 'lambda-gateway'
+        assert self.subject.function_name == "lambda-gateway"
 
     def test_function_version(self):
-        assert self.subject.function_version == '$LATEST'
+        assert self.subject.function_version == "$LATEST"
 
     def test_invoked_function_arn(self):
-        assert self.subject.invoked_function_arn == \
-            'arn:aws:lambda:us-east-1:123456789012:function:lambda-gateway'
+        assert (
+            self.subject.invoked_function_arn
+            == "arn:aws:lambda:us-east-1:123456789012:function:lambda-gateway"
+        )
 
     def test_memory_limit_in_mb(self):
         assert self.subject.memory_limit_in_mb == 128
@@ -31,7 +33,7 @@ class TestContext:
         assert self.subject.aws_request_id is not None
 
     def test_log_group_name(self):
-        assert self.subject.log_group_name == '/aws/lambda/lambda-gateway'
+        assert self.subject.log_group_name == "/aws/lambda/lambda-gateway"
 
     def test_log_stream_name(self):
         assert self.subject.log_stream_name is not None
