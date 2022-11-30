@@ -3,7 +3,7 @@ Lambda Gateway
 """
 import logging
 
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 
 
 def set_stream_logger(name, level=logging.DEBUG, format_string=None):
