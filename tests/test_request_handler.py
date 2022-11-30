@@ -11,7 +11,7 @@ from lambda_gateway.request_handler import LambdaRequestHandler
 
 
 class TestLambdaRequestHandler:
-    def setup(self):
+    def setup_method(self):
         self.subject = Mock(LambdaRequestHandler)
         self.subject.proxy = Mock(EventProxy)
         self.subject.version = "2.0"

@@ -7,7 +7,7 @@ from lambda_gateway.event_proxy import EventProxy
 
 
 class TestEventProxy:
-    def setup(self):
+    def setup_method(self):
         self.subject = EventProxy("index.handler", "/simple/", 3)
 
     @pytest.mark.parametrize(

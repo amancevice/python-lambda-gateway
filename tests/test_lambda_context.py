@@ -11,7 +11,7 @@ def test_start():
 
 
 class TestContext:
-    def setup(self):
+    def setup_method(self):
         self.subject = Context(1)
 
     def test_function_name(self):
